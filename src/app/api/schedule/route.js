@@ -1,36 +1,17 @@
+// src/app/api/schedule/route.js - Next.js App Router
+import { KVService, KV_KEYS, DataModels } from '../../../lib/kv';
+import { NextRequest, NextResponse } from 'next/server';
 
-import { KVService, KV_KEYS, DataModels } from '../../lib/kv';
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId') || 'default_user';
+  const date = searchParams.get('date');
+  const type = searchParams.get('type');
+  const recurring = searchParams.get('recurring');
 
-export default async function handler(req, res) {
-  const { method } = req;
-  const { userId = 'default_user' } = req.query;
-
-  try {
-    switch (method) {
-      case 'GET':
-        return await getSchedules(req, res, userId);
-      case 'POST':
-        return await createSchedule(req, res, userId);
-      case 'PUT':
-        return await updateSchedule(req, res, userId);
-      case 'DELETE':
-        return await deleteSchedule(req, res, userId);
-      default:
-        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${method} not allowed` });
-    }
-  } catch (error) {
-    console.error('Schedule API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-async function getSchedules(req, res, userId) {
   try {
     const schedules = await KVService.hget(KV_KEYS.SCHEDULES, userId) || [];
     
-    // Filter options
-    const { date, type, recurring } = req.query;
     let filteredSchedules = schedules;
     
     // Filter by date
@@ -56,28 +37,32 @@ async function getSchedules(req, res, userId) {
       return dateA - dateB;
     });
     
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       data: filteredSchedules,
       count: filteredSchedules.length
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch schedules' });
+    console.error('Schedule GET Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch schedules' }, { status: 500 });
   }
 }
 
-async function createSchedule(req, res, userId) {
+export async function POST(request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId') || 'default_user';
+
   try {
-    const { title, description, date, startTime, endTime, type, recurring, recurringPattern, reminder, reminderTime } = req.body;
+    const { title, description, date, startTime, endTime, type, recurring, recurringPattern, reminder, reminderTime } = await request.json();
     
     if (!title || !date || !startTime) {
-      return res.status(400).json({ error: 'Title, date, and start time are required' });
+      return NextResponse.json({ error: 'Title, date, and start time are required' }, { status: 400 });
     }
     
     // Validate schedule type
     const validTypes = ['work', 'meeting', 'personal', 'study'];
     if (type && !validTypes.includes(type)) {
-      return res.status(400).json({ error: 'Invalid schedule type' });
+      return NextResponse.json({ error: 'Invalid schedule type' }, { status: 400 });
     }
     
     // Get existing schedules
@@ -109,26 +94,30 @@ async function createSchedule(req, res, userId) {
     const success = await KVService.hset(KV_KEYS.SCHEDULES, userId, updatedSchedules);
     
     if (!success) {
-      return res.status(500).json({ error: 'Failed to create schedule' });
+      return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 });
     }
     
-    return res.status(201).json({
+    return NextResponse.json({
       success: true,
       data: newSchedule,
       message: 'Schedule created successfully'
-    });
+    }, { status: 201 });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to create schedule' });
+    console.error('Schedule POST Error:', error);
+    return NextResponse.json({ error: 'Failed to create schedule' }, { status: 500 });
   }
 }
 
-async function updateSchedule(req, res, userId) {
+export async function PUT(request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId') || 'default_user';
+  const scheduleId = searchParams.get('scheduleId');
+
   try {
-    const { scheduleId } = req.query;
-    const updateData = req.body;
+    const updateData = await request.json();
     
     if (!scheduleId) {
-      return res.status(400).json({ error: 'Schedule ID is required' });
+      return NextResponse.json({ error: 'Schedule ID is required' }, { status: 400 });
     }
     
     // Get existing schedules
@@ -138,7 +127,7 @@ async function updateSchedule(req, res, userId) {
     const scheduleIndex = existingSchedules.findIndex(schedule => schedule.id === scheduleId);
     
     if (scheduleIndex === -1) {
-      return res.status(404).json({ error: 'Schedule not found' });
+      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
     }
     
     // Update schedule
@@ -155,25 +144,28 @@ async function updateSchedule(req, res, userId) {
     const success = await KVService.hset(KV_KEYS.SCHEDULES, userId, existingSchedules);
     
     if (!success) {
-      return res.status(500).json({ error: 'Failed to update schedule' });
+      return NextResponse.json({ error: 'Failed to update schedule' }, { status: 500 });
     }
     
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       data: updatedSchedule,
       message: 'Schedule updated successfully'
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to update schedule' });
+    console.error('Schedule PUT Error:', error);
+    return NextResponse.json({ error: 'Failed to update schedule' }, { status: 500 });
   }
 }
 
-async function deleteSchedule(req, res, userId) {
+export async function DELETE(request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId') || 'default_user';
+  const scheduleId = searchParams.get('scheduleId');
+
   try {
-    const { scheduleId } = req.query;
-    
     if (!scheduleId) {
-      return res.status(400).json({ error: 'Schedule ID is required' });
+      return NextResponse.json({ error: 'Schedule ID is required' }, { status: 400 });
     }
     
     // Get existing schedules
@@ -183,21 +175,22 @@ async function deleteSchedule(req, res, userId) {
     const updatedSchedules = existingSchedules.filter(schedule => schedule.id !== scheduleId);
     
     if (updatedSchedules.length === existingSchedules.length) {
-      return res.status(404).json({ error: 'Schedule not found' });
+      return NextResponse.json({ error: 'Schedule not found' }, { status: 404 });
     }
     
     // Save to KV
     const success = await KVService.hset(KV_KEYS.SCHEDULES, userId, updatedSchedules);
     
     if (!success) {
-      return res.status(500).json({ error: 'Failed to delete schedule' });
+      return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 });
     }
     
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       message: 'Schedule deleted successfully'
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to delete schedule' });
+    console.error('Schedule DELETE Error:', error);
+    return NextResponse.json({ error: 'Failed to delete schedule' }, { status: 500 });
   }
 }
