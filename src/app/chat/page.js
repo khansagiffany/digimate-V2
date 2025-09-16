@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, Menu, X, Home, Calendar, Settings, CheckSquare } from 'lucide-react';
+import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, Menu, X, Home, Calendar, Settings, CheckSquare, History } from 'lucide-react';
 import Link from 'next/link';
 
 const formatMarkdown = (text) => {
@@ -118,11 +118,11 @@ const LoadingMessage = () => (
   </div>
 );
 
-// Component untuk item chat di chat list
+// Component untuk item chat di history sidebar
 const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, editingTitle, setEditingTitle, saveTitle }) => (
   <div
-    className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-red-50 group ${
-      isActive ? 'bg-red-50 border-red-200' : ''
+    className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 group ${
+      isActive ? 'bg-gray-100 border-l-4 border-l-red-500' : ''
     }`}
     onClick={() => onSelect(chat.id)}
   >
@@ -140,7 +140,7 @@ const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, e
           />
         ) : (
           <>
-            <h3 className="font-medium text-gray-900 truncate">{chat.title}</h3>
+            <h3 className="font-medium text-gray-900 truncate text-sm">{chat.title}</h3>
             {chat.lastMessage && (
               <p className="text-xs text-gray-500 truncate mt-1">{chat.lastMessage}</p>
             )}
@@ -157,7 +157,7 @@ const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, e
           }}
           className="p-1 hover:bg-gray-200 rounded"
         >
-          <Edit3 size={14} />
+          <Edit3 size={12} />
         </button>
         <button
           onClick={(e) => {
@@ -166,7 +166,7 @@ const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, e
           }}
           className="p-1 hover:bg-red-100 text-red-600 rounded"
         >
-          <Trash2 size={14} />
+          <Trash2 size={12} />
         </button>
       </div>
     </div>
@@ -250,57 +250,63 @@ const MainSidebar = ({ activeSection, setActiveSection }) => (
   </div>
 );
 
-// Chat List Sidebar Component
-const ChatSidebar = ({ 
+// History Sidebar Component (Minimized and more modern)
+const HistorySidebar = ({ 
   chats, 
   currentChatId, 
   setCurrentChatId,
-  createNewChat,
   editingChatId,
   editingTitle,
   setEditingTitle,
   saveTitle,
   handleEditTitle,
-  deleteChat
+  deleteChat,
+  isOpen,
+  onToggle
 }) => (
-  <div className="bg-white border-r border-gray-200 w-80 flex flex-col">
+  <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
+    isOpen ? 'w-64' : 'w-12'
+  } flex flex-col`}>
     {/* Header */}
-    <div className="p-4 border-b border-gray-200">
+    <div className="p-3 border-b border-gray-200 flex items-center justify-between">
       <button
-        onClick={createNewChat}
-        className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+        onClick={onToggle}
+        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
       >
-        <Plus size={20} />
-        New Chat
+        <History size={16} className="text-gray-600" />
       </button>
+      {isOpen && (
+        <span className="text-sm font-medium text-gray-700">Chat History</span>
+      )}
     </div>
     
     {/* Chat List */}
-    <div className="flex-1 overflow-y-auto">
-      {chats.map(chat => (
-        <ChatItem
-          key={chat.id}
-          chat={chat}
-          isActive={currentChatId === chat.id}
-          onSelect={setCurrentChatId}
-          onEdit={handleEditTitle}
-          onDelete={deleteChat}
-          editingChatId={editingChatId}
-          editingTitle={editingTitle}
-          setEditingTitle={setEditingTitle}
-          saveTitle={saveTitle}
-        />
-      ))}
-      
-      {/* Empty state */}
-      {chats.length === 0 && (
-        <div className="p-8 text-center text-gray-500">
-          <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
-          <p>No chats yet</p>
-          <p className="text-sm">Start a new conversation!</p>
-        </div>
-      )}
-    </div>
+    {isOpen && (
+      <div className="flex-1 overflow-y-auto">
+        {chats.map(chat => (
+          <ChatItem
+            key={chat.id}
+            chat={chat}
+            isActive={currentChatId === chat.id}
+            onSelect={setCurrentChatId}
+            onEdit={handleEditTitle}
+            onDelete={deleteChat}
+            editingChatId={editingChatId}
+            editingTitle={editingTitle}
+            setEditingTitle={setEditingTitle}
+            saveTitle={saveTitle}
+          />
+        ))}
+        
+        {/* Empty state */}
+        {chats.length === 0 && (
+          <div className="p-4 text-center text-gray-500">
+            <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-xs">No chats yet</p>
+          </div>
+        )}
+      </div>
+    )}
   </div>
 );
 
@@ -333,6 +339,7 @@ const ChatbotApp = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   
   // ========== REFS ==========
   const messagesEndRef = useRef(null);
@@ -668,24 +675,25 @@ const ChatbotApp = () => {
         <MainSidebar />
       </MobileSidebar>
 
-      {/* Chat Sidebar (Desktop) */}
+      {/* History Sidebar (Desktop) */}
       <div className="hidden md:block">
-        <ChatSidebar
+        <HistorySidebar
           chats={chats}
           currentChatId={currentChatId}
           setCurrentChatId={setCurrentChatId}
-          createNewChat={createNewChat}
           editingChatId={editingChatId}
           editingTitle={editingTitle}
           setEditingTitle={setEditingTitle}
           saveTitle={saveTitle}
           handleEditTitle={handleEditTitle}
           deleteChat={deleteChat}
+          isOpen={isHistoryOpen}
+          onToggle={() => setIsHistoryOpen(!isHistoryOpen)}
         />
       </div>
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
         <div className="md:hidden bg-white shadow-sm p-4 flex items-center justify-between">
           <button
@@ -701,21 +709,33 @@ const ChatbotApp = () => {
             </div>
             <span className="font-bold text-gray-800">DigiMate Chat</span>
           </div>
-          <div className="w-10"></div>
+          <button
+            onClick={createNewChat}
+            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <Plus size={16} />
+          </button>
         </div>
 
         {/* Desktop Header */}
         <div className="hidden md:block bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center">
-              <Bot size={18} className="text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center">
+                <Bot size={18} className="text-white" />
+              </div>
+              <div>
+                <h1 className="font-semibold text-gray-900">DigiMate Chat</h1>
+                <p className="text-sm text-gray-500">Powered by AI Assistant</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-semibold text-gray-900">
-                {currentChat ? currentChat.title : 'DigiMate Chat'}
-              </h1>
-              <p className="text-sm text-gray-500">Powered by AI Assistant</p>
-            </div>
+            <button
+              onClick={createNewChat}
+              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">New Chat</span>
+            </button>
           </div>
         </div>
         
