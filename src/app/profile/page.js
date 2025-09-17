@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, CheckSquare, Calendar, Save, Edit3 } from 'lucide-react';
+import { Home, User, MessageCircle, CheckSquare, Calendar, Save, Edit3, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [activeSection, setActiveSection] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -23,16 +24,26 @@ const ProfilePage = () => {
   const [uploading, setUploading] = useState(false);
 
   const sidebarItems = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'profile', icon: User, label: 'Profile' },
-    { id: 'chat', icon: MessageCircle, label: 'Chat' },
-    { id: 'task', icon: CheckSquare, label: 'Task' },
-    { id: 'schedule', icon: Calendar, label: 'Schedule' }
+    { id: 'home', icon: Home, label: 'Home', href: '/' },
+    { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
+    { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
+    { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
+    { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
   ];
 
-  // Fetch profile data on component mount
   useEffect(() => {
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const fetchProfile = async () => {
@@ -43,7 +54,6 @@ const ProfilePage = () => {
         const data = await response.json();
         setProfile(data.data);
       } else if (response.status === 404) {
-        // Profile doesn't exist, we'll show empty form
         console.log('Profile not found, showing empty form');
       }
     } catch (error) {
@@ -57,13 +67,11 @@ const ProfilePage = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please select a valid image file');
       return;
     }
 
-    // Validate file size (max 5MB - sesuai dengan API Anda)
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5MB');
       return;
@@ -72,12 +80,10 @@ const ProfilePage = () => {
     try {
       setUploading(true);
 
-      // Create FormData untuk upload ke API Anda
       const formData = new FormData();
-      formData.append('file', file); // Menggunakan 'file' sesuai dengan API Anda
+      formData.append('file', file);
       formData.append('userId', 'default_user');
 
-      // Upload ke endpoint /api/upload yang sudah ada
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
@@ -85,9 +91,8 @@ const ProfilePage = () => {
 
       if (uploadResponse.ok) {
         const uploadData = await uploadResponse.json();
-        const imageUrl = uploadData.url; // URL dari response API upload
+        const imageUrl = uploadData.url;
 
-        // Update profile dengan URL gambar baru
         const updatedProfile = {
           ...profile,
           profileImage: imageUrl
@@ -95,7 +100,6 @@ const ProfilePage = () => {
         
         setProfile(updatedProfile);
 
-        // Save profile dengan image URL ke database
         const saveResponse = await fetch('/api/profile?userId=default_user', {
           method: 'PUT',
           headers: {
@@ -107,7 +111,6 @@ const ProfilePage = () => {
         if (saveResponse.ok) {
           alert('Profile image uploaded successfully!');
         } else {
-          // Jika gagal save ke database, tetap tampilkan gambar
           console.warn('Failed to save image URL to profile, but image is uploaded');
           alert('Image uploaded but failed to save to profile. Please try saving your profile manually.');
         }
@@ -120,7 +123,6 @@ const ProfilePage = () => {
       alert(`Failed to upload image: ${error.message}`);
     } finally {
       setUploading(false);
-      // Reset file input
       event.target.value = '';
     }
   };
@@ -129,7 +131,6 @@ const ProfilePage = () => {
     try {
       setSaving(true);
       
-      // Check if profile exists first
       const getResponse = await fetch('/api/profile?userId=default_user');
       const isExisting = getResponse.ok;
       
@@ -166,64 +167,79 @@ const ProfilePage = () => {
     }));
   };
 
+  const handleNavClick = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg flex flex-col">
-        {/* DigiMate Logo */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <div className={`${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
+        
         <div className="p-6 border-b">
-          <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-            <div className="w-3 h-3 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-white rounded-full"></div>
+                <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
+                <p className="text-sm text-red-500">Your Internship Companion</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-              <p className="text-sm text-red-500">Your Internship Companion</p>
-            </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-1 rounded-lg hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4">
-        <div className="space-y-2">
-          {[
-            { id: 'home', icon: Home, label: 'Home', href: '/' },
-            { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-            { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
-            { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-          ].map((item) => (
-            item.href ? (
-              <Link key={item.id} href={item.href}>
-                <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}>
+          <div className="space-y-2">
+            {sidebarItems.map((item) => (
+              item.href ? (
+                <Link key={item.id} href={item.href} onClick={handleNavClick}>
+                  <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
+                    activeSection === item.id
+                      ? 'bg-red-50 text-red-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}>
+                    <item.icon className="w-6 h-6 mb-1" />
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </div>
+                </Link>
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    handleNavClick();
+                  }}
+                  className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
+                    activeSection === item.id
+                      ? 'bg-red-50 text-red-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
                   <item.icon className="w-6 h-6 mb-1" />
                   <span className="text-xs font-medium">{item.label}</span>
-                </div>
-              </Link>
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <item.icon className="w-6 h-6 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
-              </button>
-            )
-          ))}
-        </div>
-      </nav>
+                </button>
+              )
+            ))}
+          </div>
+        </nav>
 
-        {/* User Avatar */}
         <div className="p-4 border-t">
           <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
             <span className="text-white font-semibold">N</span>
@@ -231,14 +247,20 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
+      <div className="flex-1 flex flex-col md:ml-0">
         <div className="bg-white shadow-sm border-b p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
-              <p className="text-gray-600 mt-1">Manage your personal information</p>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
+                <p className="text-gray-600 mt-1">Manage your personal information</p>
+              </div>
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
@@ -250,11 +272,9 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Profile Content */}
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              {/* Profile Image Section */}
               <div className="text-center mb-8">
                 <div className="relative inline-block">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 mx-auto mb-4">
@@ -273,7 +293,7 @@ const ProfilePage = () => {
                   
                   {isEditing && (
                     <div className="absolute bottom-0 right-0">
-                      <label className="cursor-pointer bg-red-500 w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
+                      <label className="cursor-pointer bg-red-500 text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
                         <Edit3 size={16} />
                         <input
                           type="file"
@@ -297,7 +317,6 @@ const ProfilePage = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Personal Information */}
                 <div className="md:col-span-2">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
                 </div>
@@ -359,7 +378,6 @@ const ProfilePage = () => {
                   )}
                 </div>
 
-                {/* Education */}
                 <div className="md:col-span-2 mt-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Education</h3>
                 </div>
@@ -402,7 +420,6 @@ const ProfilePage = () => {
                   )}
                 </div>
 
-                {/* Work Experience */}
                 <div className="md:col-span-2 mt-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Work Experience</h3>
                 </div>
@@ -445,7 +462,6 @@ const ProfilePage = () => {
                   )}
                 </div>
 
-                {/* Save Button */}
                 {isEditing && (
                   <div className="md:col-span-2 mt-6">
                     <button

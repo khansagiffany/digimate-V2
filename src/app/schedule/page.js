@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, CheckSquare, Calendar, Plus, Edit3, Trash2, Clock, MapPin, X } from 'lucide-react';
+import { Home, User, MessageCircle, CheckSquare, Calendar, Plus, Edit3, Trash2, Clock, X, Menu } from 'lucide-react';
 import Link from 'next/link';
 
 const SchedulePage = () => {
@@ -15,6 +15,7 @@ const SchedulePage = () => {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -44,7 +45,17 @@ const SchedulePage = () => {
     filterSchedulesForMonth();
   }, [schedules, currentDate]);
 
-  // Helper function to format date consistently
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const formatDateString = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,7 +78,6 @@ const SchedulePage = () => {
     }
   };
 
-  // Filter schedules for the next month from current date
   const filterSchedulesForMonth = () => {
     const today = new Date();
     const nextMonth = new Date(today);
@@ -80,7 +90,6 @@ const SchedulePage = () => {
       return schedule.date >= todayStr && schedule.date <= nextMonthStr;
     });
     
-    // Sort by date and time
     filtered.sort((a, b) => {
       if (a.date === b.date) {
         return a.startTime.localeCompare(b.startTime);
@@ -162,7 +171,6 @@ const SchedulePage = () => {
       });
     } else {
       setEditingSchedule(null);
-      // Use selected date and format it properly
       setFormData({
         ...formData,
         date: formatDateString(selectedDate)
@@ -228,9 +236,8 @@ const SchedulePage = () => {
     });
   };
 
-  // Helper function to format date for display
   const formatDisplayDate = (dateStr) => {
-    const date = new Date(dateStr + 'T00:00:00'); // Add time to avoid timezone issues
+    const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { 
       weekday: 'short',
       month: 'short', 
@@ -238,110 +245,141 @@ const SchedulePage = () => {
     });
   };
 
-  const Sidebar = () => (
-    <div className="w-64 bg-white shadow-lg h-full flex flex-col flex-shrink-0">
-      <div className="p-6 border-b">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-            <div className="w-3 h-3 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-            <p className="text-sm text-red-500">Your Internship Companion</p>
-          </div>
-        </div>
-      </div>
-  
-      <nav className="flex-1 p-4">
-        <div className="space-y-2">
-          {[
-            { id: 'home', icon: Home, label: 'Home', href: '/' },
-            { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-            { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
-            { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-          ].map((item) => (
-            item.href ? (
-              <Link key={item.id} href={item.href}>
-                <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}>
-                  <item.icon className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </div>
-              </Link>
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <item.icon className="w-6 h-6 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
-              </button>
-            )
-          ))}
-        </div>
-      </nav>
-    </div>
-  );
+  const handleNavClick = () => {
+    setIsSidebarOpen(false);
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar />
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-      {/* Main Content */}
+      <div className={`${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
+        
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-white rounded-full"></div>
+                <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
+                <p className="text-sm text-red-500">Your Internship Companion</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-1 rounded-lg hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-4">
+          <div className="space-y-2">
+            {[
+              { id: 'home', icon: Home, label: 'Home', href: '/' },
+              { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
+              { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
+              { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
+              { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
+            ].map((item) => (
+              item.href ? (
+                <Link key={item.id} href={item.href} onClick={handleNavClick}>
+                  <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
+                    activeSection === item.id
+                      ? 'bg-red-50 text-red-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}>
+                    <item.icon className="w-6 h-6 mb-1" />
+                    <span className="text-xs font-medium">{item.label}</span>
+                  </div>
+                </Link>
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    handleNavClick();
+                  }}
+                  className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
+                    activeSection === item.id
+                      ? 'bg-red-50 text-red-600'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <item.icon className="w-6 h-6 mb-1" />
+                  <span className="text-xs font-medium">{item.label}</span>
+                </button>
+              )
+            ))}
+          </div>
+        </nav>
+
+        <div className="p-4 border-t">
+          <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold">N</span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <div className="bg-white shadow-sm border-b p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Schedule</h1>
-              <p className="text-gray-600 mt-1">Manage your events and appointments</p>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">Schedule</h1>
+                <p className="text-gray-600 mt-1">Manage your events and appointments</p>
+              </div>
             </div>
             <button
               onClick={() => openModal()}
               className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
               <Plus size={16} />
-              <span>Add Event</span>
+              <span className="hidden sm:inline">Add Event</span>
+              <span className="sm:hidden">Add</span>
             </button>
           </div>
         </div>
 
-        {/* Calendar & Schedule Content */}
-        <div className="flex-1 p-6 overflow-hidden">
-          <div className="flex h-full space-x-6">
-            {/* Calendar */}
-            <div className="w-2/3 bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex-1 p-4 md:p-6 overflow-hidden">
+          <div className="flex flex-col lg:flex-row h-full space-y-6 lg:space-y-0 lg:space-x-6">
+            <div className="lg:w-2/3 bg-white rounded-lg shadow-sm border p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-black">
+                <h2 className="text-lg md:text-xl font-semibold text-black">
                   {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </h2>
-                <div className="flex space-x-2">
+                <div className="flex space-x-1 md:space-x-2">
                   <button
                     onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-                    className="px-3 py-1 border rounded hover:bg-gray-50 text-black"
+                    className="px-2 md:px-3 py-1 border rounded hover:bg-gray-50 text-black text-sm"
                   >
                     ‹
                   </button>
                   <button
                     onClick={() => setCurrentDate(new Date())}
-                    className="px-3 py-1 border rounded hover:bg-gray-50 text-black"
+                    className="px-2 md:px-3 py-1 border rounded hover:bg-gray-50 text-black text-sm"
                   >
                     Today
                   </button>
                   <button
                     onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-                    className="px-3 py-1 border rounded hover:bg-gray-50 text-black"
+                    className="px-2 md:px-3 py-1 border rounded hover:bg-gray-50 text-black text-sm"
                   >
                     ›
                   </button>
@@ -350,7 +388,7 @@ const SchedulePage = () => {
 
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+                  <div key={day} className="p-1 md:p-2 text-center text-xs md:text-sm font-medium text-gray-500">
                     {day}
                   </div>
                 ))}
@@ -361,7 +399,7 @@ const SchedulePage = () => {
                   <button
                     key={index}
                     onClick={() => setSelectedDate(new Date(day.date))}
-                    className={`p-2 text-sm rounded-lg transition-colors relative ${
+                    className={`p-1 md:p-2 text-xs md:text-sm rounded-lg transition-colors relative ${
                       !day.isCurrentMonth ? 'text-gray-300' :
                       day.isSelected ? 'bg-red-500 text-white' :
                       day.isToday ? 'bg-red-50 text-red-600 font-medium' :
@@ -370,16 +408,15 @@ const SchedulePage = () => {
                   >
                     {day.date.getDate()}
                     {day.hasEvents && (
-                      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-red-500 rounded-full"></div>
+                      <div className="absolute bottom-0.5 md:bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-red-500 rounded-full"></div>
                     )}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Events List - Now shows upcoming month */}
-            <div className="w-1/3 bg-white rounded-lg shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            <div className="lg:w-1/3 bg-white rounded-lg shadow-sm border p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
                 Upcoming Events (Next Month)
               </h3>
 
@@ -390,38 +427,37 @@ const SchedulePage = () => {
                   No upcoming events
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-64 lg:max-h-96 overflow-y-auto">
                   {filteredSchedules.map((schedule) => (
                     <div key={schedule.id} className="border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-3 h-3 rounded-full ${getTypeColor(schedule.type)}`}></div>
-                          <h4 className="font-medium text-gray-800">{schedule.title}</h4>
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getTypeColor(schedule.type)}`}></div>
+                          <h4 className="font-medium text-gray-800 truncate text-sm">{schedule.title}</h4>
                         </div>
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 flex-shrink-0">
                           <button
                             onClick={() => openModal(schedule)}
                             className="p-1 text-gray-400 hover:text-gray-600"
                           >
-                            <Edit3 size={14} />
+                            <Edit3 size={12} />
                           </button>
                           <button
                             onClick={() => handleDeleteSchedule(schedule.id)}
                             className="p-1 text-gray-400 hover:text-red-600"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </div>
                       
-                      {/* Date info */}
-                      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
-                        <Calendar size={12} />
+                      <div className="flex items-center space-x-2 text-xs text-gray-500 mb-1">
+                        <Calendar size={10} />
                         <span>{formatDisplayDate(schedule.date)}</span>
                       </div>
                       
-                      <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
-                        <Clock size={12} />
+                      <div className="flex items-center space-x-2 text-xs text-gray-600 mb-1">
+                        <Clock size={10} />
                         <span>{formatTime(schedule.startTime)}</span>
                         {schedule.endTime && (
                           <>
@@ -432,15 +468,15 @@ const SchedulePage = () => {
                       </div>
 
                       {schedule.description && (
-                        <p className="text-sm text-gray-600">{schedule.description}</p>
+                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">{schedule.description}</p>
                       )}
 
-                      <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center justify-between">
                         <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600 capitalize">
                           {schedule.type}
                         </span>
                         {schedule.recurring && (
-                          <span className="text-xs text-gray-500">🔄 Recurring</span>
+                          <span className="text-xs text-gray-500">Recurring</span>
                         )}
                       </div>
                     </div>
@@ -452,18 +488,17 @@ const SchedulePage = () => {
         </div>
       </div>
 
-      {/* Modal dengan backdrop yang lebih gelap dan blur */}
       {showModal && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
-          onClick={() => {setShowModal(false); resetForm();}} // Click outside to close
+          onClick={() => {setShowModal(false); resetForm();}}
         >
           <div 
-            className="bg-white rounded-xl p-6 w-96 max-h-[85vh] overflow-y-auto shadow-2xl relative z-[10000] transform transition-all"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+            className="bg-white rounded-xl p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl relative z-[10000] transform transition-all"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-800">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800">
                 {editingSchedule ? 'Edit Event' : 'Add New Event'}
               </h3>
               <button
@@ -481,7 +516,7 @@ const SchedulePage = () => {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all"
                   placeholder="Event title"
                 />
               </div>
@@ -491,7 +526,7 @@ const SchedulePage = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all resize-none"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all resize-none"
                   rows="3"
                   placeholder="Event description (optional)"
                 />
@@ -503,7 +538,7 @@ const SchedulePage = () => {
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-black transition-all"
                 />
               </div>
 
@@ -514,7 +549,7 @@ const SchedulePage = () => {
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
                   />
                 </div>
                 <div>
@@ -523,7 +558,7 @@ const SchedulePage = () => {
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
+                    className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
                   />
                 </div>
               </div>
@@ -533,7 +568,7 @@ const SchedulePage = () => {
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
+                  className="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600 transition-all"
                 >
                   {scheduleTypes.map((type) => (
                     <option key={type.value} value={type.value}>{type.label}</option>
@@ -565,19 +600,19 @@ const SchedulePage = () => {
                 </div>
               </div>
 
-              <div className="flex space-x-3 pt-6 border-t">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-6 border-t">
                 <button
                   onClick={() => {setShowModal(false); resetForm();}}
-                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-600"
+                  className="flex-1 px-4 md:px-6 py-2 md:py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-600"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveSchedule}
                   disabled={saving || !formData.title || !formData.date || !formData.startTime}
-                  className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="flex-1 px-4 md:px-6 py-2 md:py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
-                  {saving ? 'Saving...' : (editingSchedule ? 'Update Event' : 'Create Event')}
+                  {saving ? 'Saving...' : (editingSchedule ? 'Update' : 'Create')}
                 </button>
               </div>
             </div>
