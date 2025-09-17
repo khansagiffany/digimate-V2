@@ -731,7 +731,7 @@ const ChatbotApp = () => {
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
                   onInput={handleTextareaInput}
-                  placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                  placeholder="Type your message here..."
                   className="w-full px-4 py-3 border border-gray-300 text-black rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent max-h-32"
                   rows={1}
                   disabled={isLoading}

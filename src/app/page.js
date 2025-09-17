@@ -13,6 +13,9 @@ const DigiMateHome = () => {
   const [error, setError] = useState('');
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  // State baru untuk chat history
+  const [recentChats, setRecentChats] = useState([]);
+  const [chatsLoading, setChatsLoading] = useState(true);
 
   const userId = 'default_user'; // In production, get from auth
 
@@ -63,16 +66,14 @@ const DigiMateHome = () => {
     }
   };
 
-  // Fetch upcoming events - FIXED VERSION
+  // Fetch upcoming events
   const fetchEvents = async () => {
     setEventsLoading(true);
     try {
-      // Menggunakan endpoint yang sama seperti di SchedulePage
       const response = await fetch(`/api/schedule?userId=${userId}`);
       const data = await response.json();
       
       if (response.ok && data.success) {
-        // Filter upcoming events menggunakan logic yang sama dengan SchedulePage
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -80,21 +81,15 @@ const DigiMateHome = () => {
         
         const upcoming = data.data
           .filter(event => {
-            // Filter events yang tanggalnya >= hari ini
             return event.date >= todayStr;
           })
           .sort((a, b) => {
-            // Sort by date first, then by start time
             if (a.date === b.date) {
               return a.startTime.localeCompare(b.startTime);
             }
             return a.date.localeCompare(b.date);
           })
-          .slice(0, 5); // Show only first 5 upcoming events
-        
-        console.log('Fetched events:', data.data);
-        console.log('Filtered upcoming events:', upcoming);
-        console.log('Today string:', todayStr);
+          .slice(0, 5);
         
         setUpcomingEvents(upcoming);
       } else {
@@ -107,9 +102,68 @@ const DigiMateHome = () => {
     }
   };
 
+  // Fetch recent chats - FUNGSI BARU
+  const fetchRecentChats = async () => {
+    setChatsLoading(true);
+    try {
+      const response = await fetch(`/api/chat?userId=${userId}`);
+      
+      if (!response.ok) {
+        console.error('API Error:', response.status, response.statusText);
+        // Set demo data jika API tidak tersedia
+        setRecentChats([
+          {
+            id: 'demo-1',
+            title: 'Demo Chat',
+            lastMessage: 'This is a demo message from chat history',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'demo-2', 
+            title: 'Another Demo Chat',
+            lastMessage: 'Another demo message to show chat history',
+            timestamp: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
+          }
+        ]);
+        return;
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Expected JSON but got:', contentType);
+        setRecentChats([]);
+        return;
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        // Ambil 5 chat terbaru dan urutkan berdasarkan timestamp
+        const sortedChats = data.data
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .slice(0, 5);
+        setRecentChats(sortedChats);
+      } else {
+        setRecentChats([]);
+      }
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+      // Fallback dengan demo data
+      setRecentChats([
+        {
+          id: 'demo-1',
+          title: 'Demo Chat',
+          lastMessage: 'This is a demo message since API is not available',
+          timestamp: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setChatsLoading(false);
+    }
+  };
+
   // Helper function untuk format tanggal
   const formatDisplayDate = (dateString) => {
-    const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+    const date = new Date(dateString + 'T00:00:00');
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -140,6 +194,26 @@ const DigiMateHome = () => {
     });
   };
 
+  // Helper function untuk format timestamp chat
+  const formatChatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+    if (diffDays > 0) {
+      return `${diffDays}d ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ago`;
+    } else if (diffMinutes > 0) {
+      return `${diffMinutes}m ago`;
+    } else {
+      return 'Just now';
+    }
+  };
+
   // Helper function untuk mendapatkan warna berdasarkan type
   const getTypeColor = (type) => {
     const colors = {
@@ -155,6 +229,7 @@ const DigiMateHome = () => {
     fetchProfile();
     fetchTasks();
     fetchEvents();
+    fetchRecentChats(); // Tambahkan fungsi fetch chat history
   }, []);
 
   const Sidebar = () => (
@@ -259,7 +334,6 @@ const DigiMateHome = () => {
     if (profileLoading) return 'Loading...';
     if (!profile) return 'User';
     
-    // Check if profile has name (fullname) field
     return profile.name || profile.fullName || profile.full_name || 'User';
   };
 
@@ -365,7 +439,7 @@ const DigiMateHome = () => {
               )}
             </div>
 
-            {/* Upcoming Events Section - IMPROVED VERSION */}
+            {/* Upcoming Events Section */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-red-500">Upcoming Events</h3>
@@ -428,15 +502,59 @@ const DigiMateHome = () => {
               )}
             </div>
 
-            {/* Recent Chats Section */}
+            {/* Recent Chats Section - SECTION YANG DIPERBARUI */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-xl font-semibold text-red-500 mb-6">Recent Chats</h3>
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-2">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                </div>
-                <p className="text-gray-500">No chat history available</p>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-red-500">Recent Chats</h3>
+                <Link href="/chat" className="text-sm text-red-500 hover:text-red-600">
+                  View All
+                </Link>
               </div>
+
+              {chatsLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading chats...</p>
+                </div>
+              ) : recentChats.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 mb-2">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                  </div>
+                  <p className="text-gray-500">No chat history available</p>
+                  <p className="text-gray-400 text-sm mt-1">Start chatting to see your history here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentChats.map((chat) => (
+                    <Link key={chat.id} href="/chat">
+                      <div className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <MessageCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                              <h4 className="font-medium text-gray-800 truncate">{chat.title}</h4>
+                            </div>
+                            
+                            {chat.lastMessage && (
+                              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                {chat.lastMessage.length > 100 
+                                  ? chat.lastMessage.substring(0, 100) + '...'
+                                  : chat.lastMessage
+                                }
+                              </p>
+                            )}
+                            
+                            <div className="flex items-center text-xs text-gray-400">
+                              <span>{formatChatTime(chat.timestamp)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
