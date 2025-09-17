@@ -261,24 +261,17 @@ const HistorySidebar = ({
   saveTitle,
   handleEditTitle,
   deleteChat,
-  isOpen,
-  onToggle
+  isOpen
 }) => (
   <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
-    isOpen ? 'w-64' : 'w-12'
-  } flex flex-col`}>
+    isOpen ? 'w-64' : 'w-0'
+  } flex flex-col overflow-hidden`}>
     {/* Header */}
-    <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-      <button
-        onClick={onToggle}
-        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-      >
-        <History size={16} className="text-gray-600" />
-      </button>
-      {isOpen && (
+    {isOpen && (
+      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
         <span className="text-sm font-medium text-gray-700">Chat History</span>
-      )}
-    </div>
+      </div>
+    )}
     
     {/* Chat List */}
     {isOpen && (
@@ -339,7 +332,7 @@ const ChatbotApp = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Changed to false by default
   
   // ========== REFS ==========
   const messagesEndRef = useRef(null);
@@ -688,7 +681,6 @@ const ChatbotApp = () => {
           handleEditTitle={handleEditTitle}
           deleteChat={deleteChat}
           isOpen={isHistoryOpen}
-          onToggle={() => setIsHistoryOpen(!isHistoryOpen)}
         />
       </div>
       
@@ -729,13 +721,24 @@ const ChatbotApp = () => {
                 <p className="text-sm text-gray-500">Powered by AI Assistant</p>
               </div>
             </div>
-            <button
-              onClick={createNewChat}
-              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus size={16} />
-              <span className="hidden sm:inline">New Chat</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* History Toggle Button */}
+              <button
+                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Toggle Chat History"
+              >
+                <History size={16} />
+              </button>
+              {/* New Chat Button (Now just + icon) */}
+              <button
+                onClick={createNewChat}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                title="New Chat"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
         </div>
         
