@@ -1,7 +1,7 @@
 "use client"; 
 
 import React, { useState } from 'react';
-import { Home, User, MessageCircle, Calendar, Settings, CheckSquare } from 'lucide-react';
+import { Home, User, MessageCircle, Calendar, CheckSquare } from 'lucide-react';
 
 const DigiMateHome = () => {
   const [activeSection, setActiveSection] = useState('home');
@@ -35,8 +35,7 @@ const DigiMateHome = () => {
             { id: 'profile', icon: User, label: 'Profile' },
             { id: 'chat', icon: MessageCircle, label: 'Chat' },
             { id: 'task', icon: CheckSquare, label: 'Task' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule' },
-            { id: 'settings', icon: Settings, label: 'Settings' }
+            { id: 'schedule', icon: Calendar, label: 'Schedule' }
           ].map((item) => (
             <button
               key={item.id}
@@ -119,7 +118,7 @@ const DigiMateHome = () => {
               <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 Hello, User
               </h2>
-              <p className="text-gray-600 mb-4">Here's Your Summary as a Intern</p>
+              <p className="text-gray-600 mb-4">Here's Your Summary as an Intern</p>
               
               {/* Error Alert */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">

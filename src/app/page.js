@@ -1,7 +1,7 @@
 "use client"; 
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, Calendar, Settings, CheckSquare } from 'lucide-react';
+import { Home, User, MessageCircle, Calendar, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 
 const DigiMateHome = () => {
@@ -179,8 +179,7 @@ const DigiMateHome = () => {
             { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
             { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
             { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' },
-            { id: 'settings', icon: Settings, label: 'Settings', href: '/settings' }
+            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
           ].map((item) => (
             item.href ? (
               <Link key={item.id} href={item.href}>

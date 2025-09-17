@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, CheckSquare, Calendar, Settings, Save, Edit3 } from 'lucide-react';
+import { Home, User, MessageCircle, CheckSquare, Calendar, Save, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 
 const ProfilePage = () => {
@@ -27,8 +27,7 @@ const ProfilePage = () => {
     { id: 'profile', icon: User, label: 'Profile' },
     { id: 'chat', icon: MessageCircle, label: 'Chat' },
     { id: 'task', icon: CheckSquare, label: 'Task' },
-    { id: 'schedule', icon: Calendar, label: 'Schedule' },
-    { id: 'settings', icon: Settings, label: 'Settings' }
+    { id: 'schedule', icon: Calendar, label: 'Schedule' }
   ];
 
   // Fetch profile data on component mount
@@ -193,8 +192,7 @@ const ProfilePage = () => {
             { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
             { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
             { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' },
-            { id: 'settings', icon: Settings, label: 'Settings', href: '/settings' }
+            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
           ].map((item) => (
             item.href ? (
               <Link key={item.id} href={item.href}>
@@ -275,7 +273,7 @@ const ProfilePage = () => {
                   
                   {isEditing && (
                     <div className="absolute bottom-0 right-0">
-                      <label className="cursor-pointer bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors">
+                      <label className="cursor-pointer bg-red-500 w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
                         <Edit3 size={16} />
                         <input
                           type="file"
@@ -313,7 +311,7 @@ const ProfilePage = () => {
                       type="text"
                       value={profile.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your full name"
                     />
                   ) : (
@@ -332,7 +330,7 @@ const ProfilePage = () => {
                       type="email"
                       value={profile.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your email"
                     />
                   ) : (
@@ -351,7 +349,7 @@ const ProfilePage = () => {
                       type="tel"
                       value={profile.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your phone number"
                     />
                   ) : (
@@ -375,7 +373,7 @@ const ProfilePage = () => {
                       type="text"
                       value={profile.university}
                       onChange={(e) => handleInputChange('university', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your university"
                     />
                   ) : (
@@ -394,7 +392,7 @@ const ProfilePage = () => {
                       type="text"
                       value={profile.major}
                       onChange={(e) => handleInputChange('major', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your major"
                     />
                   ) : (
@@ -418,7 +416,7 @@ const ProfilePage = () => {
                       type="text"
                       value={profile.company}
                       onChange={(e) => handleInputChange('company', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your company"
                     />
                   ) : (
@@ -437,7 +435,7 @@ const ProfilePage = () => {
                       type="text"
                       value={profile.position}
                       onChange={(e) => handleInputChange('position', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-600"
                       placeholder="Enter your position"
                     />
                   ) : (

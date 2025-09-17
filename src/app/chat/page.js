@@ -1,39 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, Menu, X, Home, Calendar, Settings, CheckSquare, History } from 'lucide-react';
+import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, Menu, X, Home, Calendar, CheckSquare, History } from 'lucide-react';
 import Link from 'next/link';
 
 const formatMarkdown = (text) => {
-  // Convert markdown-like formatting to HTML
   let formatted = text
-    // Bold: **text** or __text__
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.*?)__/g, '<strong>$1</strong>')
-    // Italic: *text* or _text_
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/_(.*?)_/g, '<em>$1</em>')
-    // Code blocks: ```code```
     .replace(/```(.*?)```/gs, '<pre class="bg-gray-100 p-2 rounded text-sm overflow-x-auto my-2"><code>$1</code></pre>')
-    // Inline code: `code`
     .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>')
-    // Headers: # ## ###
     .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-4 mb-2">$1</h2>')
     .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>')
-    // Lists: - item or * item
     .replace(/^[\-\*] (.+)$/gm, '<li class="ml-4">• $1</li>')
-    // Numbered lists: 1. item
     .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
-    // Line breaks
     .replace(/\n/g, '<br>');
-
-  // Wrap consecutive list items in ul tags
   formatted = formatted.replace(/(<li class="ml-4">.*?<\/li>(?:<br>)?)+/g, (match) => {
     return '<ul class="my-2">' + match.replace(/<br>/g, '') + '</ul>';
   });
-
-  // Wrap consecutive numbered list items in ol tags
   formatted = formatted.replace(/(<li class="ml-4 list-decimal">.*?<\/li>(?:<br>)?)+/g, (match) => {
     return '<ol class="my-2 ml-4">' + match.replace(/<br>/g, '').replace(/class="ml-4 list-decimal"/g, '') + '</ol>';
   });
@@ -41,9 +28,6 @@ const formatMarkdown = (text) => {
   return formatted;
 };
 
-// ========== COMPONENTS ==========
-
-// Component untuk menampilkan pesan individual
 const Message = ({ message, isUser }) => {
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -53,7 +37,7 @@ const Message = ({ message, isUser }) => {
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       {/* Avatar untuk assistant */}
       {!isUser && (
         <div className="w-8 h-8 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -69,7 +53,6 @@ const Message = ({ message, isUser }) => {
       }`}>
         <div className={`${isUser ? 'text-white' : 'text-gray-900'} prose prose-sm max-w-none`}>
           {isUser ? (
-            // User messages - simple text with line breaks
             message.content.split('\n').map((line, i) => (
               <div key={i}>
                 {line}
@@ -77,7 +60,6 @@ const Message = ({ message, isUser }) => {
               </div>
             ))
           ) : (
-            // AI messages - formatted with markdown
             <div 
               dangerouslySetInnerHTML={{ 
                 __html: formatMarkdown(message.content) 
@@ -102,9 +84,8 @@ const Message = ({ message, isUser }) => {
   );
 };
 
-// Component untuk loading indicator
 const LoadingMessage = () => (
-  <div className="flex gap-3 justify-start">
+  <div className="flex gap-3 justify-start mb-4">
     <div className="w-8 h-8 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center flex-shrink-0">
       <Bot size={18} className="text-white" />
     </div>
@@ -118,7 +99,6 @@ const LoadingMessage = () => (
   </div>
 );
 
-// Component untuk item chat di history sidebar
 const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, editingTitle, setEditingTitle, saveTitle }) => (
   <div
     className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 group ${
@@ -173,7 +153,6 @@ const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, e
   </div>
 );
 
-// Component untuk welcome screen
 const WelcomeScreen = ({ setInputMessage }) => {
   const suggestions = [
     'What can you help me with?',
@@ -183,29 +162,30 @@ const WelcomeScreen = ({ setInputMessage }) => {
   ];
 
   return (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Bot size={32} className="text-white" />
-      </div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to DigiMate Chat!</h2>
-      <p className="text-gray-500 mb-6">Ask me anything and I'll help you with information, creative tasks, problem-solving, and more.</p>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
-        {suggestions.map((suggestion, index) => (
-          <button
-            key={index}
-            onClick={() => setInputMessage(suggestion)}
-            className="p-3 text-left bg-white border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
-          >
-            <span className="text-sm font-medium text-gray-900">{suggestion}</span>
-          </button>
-        ))}
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Bot size={32} className="text-white" />
+        </div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to DigiMate Chat!</h2>
+        <p className="text-gray-500 mb-6">Ask me anything and I'll help you with information, creative tasks, problem-solving, and more.</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+          {suggestions.map((suggestion, index) => (
+            <button
+              key={index}
+              onClick={() => setInputMessage(suggestion)}
+              className="p-3 text-left bg-white border border-gray-200 rounded-lg hover:border-red-300 transition-colors"
+            >
+              <span className="text-sm font-medium text-gray-900">{suggestion}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
-// Main Sidebar Component (similar to DigiMate)
 const MainSidebar = ({ activeSection, setActiveSection }) => (
   <div className="bg-white shadow-lg h-full flex flex-col">
     <div className="p-6 border-b">
@@ -228,8 +208,7 @@ const MainSidebar = ({ activeSection, setActiveSection }) => (
           { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
           { id: 'chat', icon: MessageSquare, label: 'Chat', href: '/chat', active: true },
           { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-          { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' },
-          { id: 'settings', icon: Settings, label: 'Settings', href: '/settings' }
+          { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
         ].map((item) => (
           item.href && !item.active ? (
             <Link key={item.id} href={item.href}>
@@ -250,7 +229,6 @@ const MainSidebar = ({ activeSection, setActiveSection }) => (
   </div>
 );
 
-// History Sidebar Component (Minimized and more modern)
 const HistorySidebar = ({ 
   chats, 
   currentChatId, 
@@ -265,10 +243,10 @@ const HistorySidebar = ({
 }) => (
   <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
     isOpen ? 'w-64' : 'w-0'
-  } flex flex-col overflow-hidden`}>
+  } flex flex-col overflow-hidden h-full`}>
     {/* Header */}
     {isOpen && (
-      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+      <div className="p-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <span className="text-sm font-medium text-gray-700">Chat History</span>
       </div>
     )}
@@ -303,7 +281,6 @@ const HistorySidebar = ({
   </div>
 );
 
-// Mobile Sidebar Component
 const MobileSidebar = ({ isOpen, onClose, children }) => (
   <>
     {isOpen && (
@@ -320,10 +297,7 @@ const MobileSidebar = ({ isOpen, onClose, children }) => (
   </>
 );
 
-// ========== MAIN COMPONENT ==========
-
 const ChatbotApp = () => {
-  // ========== STATE ==========
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -332,16 +306,11 @@ const ChatbotApp = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Changed to false by default
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   
-  // ========== REFS ==========
-  const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  
-  // ========== CONSTANTS ==========
   const userId = 'default_user';
   
-  // ========== EFFECTS ==========
   useEffect(() => {
     fetchChats();
   }, []);
@@ -354,16 +323,6 @@ const ChatbotApp = () => {
     }
   }, [currentChatId]);
   
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-  
-  // ========== UTILITY FUNCTIONS ==========
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
-  // ========== API FUNCTIONS ==========
   const fetchChats = async () => {
     try {
       const response = await fetch(`/api/chat?userId=${userId}`);
@@ -623,7 +582,6 @@ const ChatbotApp = () => {
     }
   };
   
-  // ========== EVENT HANDLERS ==========
   const handleEditTitle = (chat) => {
     setEditingChatId(chat.id);
     setEditingTitle(chat.title);
@@ -649,15 +607,15 @@ const ChatbotApp = () => {
     e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
   };
   
-  // ========== DERIVED STATE ==========
   const currentChat = chats.find(chat => chat.id === currentChatId);
   
-  // ========== RENDER ==========
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Main Sidebar (Desktop) */}
-      <div className="hidden lg:block w-64">
-        <MainSidebar />
+      <div className="hidden lg:flex lg:flex-shrink-0">
+        <div className="w-64">
+          <MainSidebar />
+        </div>
       </div>
 
       {/* Mobile Main Sidebar */}
@@ -669,7 +627,7 @@ const ChatbotApp = () => {
       </MobileSidebar>
 
       {/* History Sidebar (Desktop) */}
-      <div className="hidden md:block">
+      <div className="hidden md:flex md:flex-shrink-0">
         <HistorySidebar
           chats={chats}
           currentChatId={currentChatId}
@@ -687,7 +645,7 @@ const ChatbotApp = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
-        <div className="md:hidden bg-white shadow-sm p-4 flex items-center justify-between">
+        <div className="md:hidden bg-white shadow-sm p-4 flex items-center justify-between flex-shrink-0">
           <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100"
@@ -710,7 +668,7 @@ const ChatbotApp = () => {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden md:block bg-white border-b border-gray-200 px-6 py-4">
+        <div className="hidden md:block bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center">
@@ -730,7 +688,7 @@ const ChatbotApp = () => {
               >
                 <History size={16} />
               </button>
-              {/* New Chat Button (Now just + icon) */}
+              {/* New Chat Button */}
               <button
                 onClick={createNewChat}
                 className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
@@ -743,25 +701,27 @@ const ChatbotApp = () => {
         </div>
         
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {messages.length === 0 ? (
-            <WelcomeScreen setInputMessage={setInputMessage} />
-          ) : (
-            messages.map((message) => (
-              <Message
-                key={message.id}
-                message={message}
-                isUser={message.role === 'user'}
-              />
-            ))
-          )}
-          
-          {isLoading && <LoadingMessage />}
-          <div ref={messagesEndRef} />
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+            {messages.length === 0 ? (
+              <WelcomeScreen setInputMessage={setInputMessage} />
+            ) : (
+              <div>
+                {messages.map((message) => (
+                  <Message
+                    key={message.id}
+                    message={message}
+                    isUser={message.role === 'user'}
+                  />
+                ))}
+                {isLoading && <LoadingMessage />}
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Input Area */}
-        <div className="bg-white border-t border-gray-200 p-4">
+        <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-end gap-3">
               <div className="flex-1">
