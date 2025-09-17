@@ -1,107 +1,61 @@
 // src/app/api/chat/route.js
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { DatabaseService } from '../../../lib/database.js';
 
+// Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Mock KV Service - ganti dengan Redis atau database asli
-class MockKVService {
-  static data = new Map();
-  
-  static async hget(key, field) {
-    const hash = this.data.get(key) || {};
-    return hash[field];
-  }
-  
-  static async hset(key, field, value) {
-    const hash = this.data.get(key) || {};
-    hash[field] = value;
-    this.data.set(key, hash);
-    return true;
-  }
-  
-  static async del(key) {
-    return this.data.delete(key);
-  }
-  
-  static generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  }
-}
-
-const KV_KEYS = {
-  CHATS: 'user_chats',
-  MESSAGES: 'chat_messages'
-};
-
-// Data Models
-const DataModels = {
-  Chat: {
-    id: null,
-    userId: null,
-    title: 'New Chat',
-    createdAt: null,
-    lastMessage: null,
-    lastMessageTime: null,
-    unreadCount: 0
-  },
-  Message: {
-    id: null,
-    chatId: null,
-    content: '',
-    role: 'user', // 'user' | 'assistant'
-    timestamp: null
-  }
-};
-
-// Gemini AI Integration
+// Improved Gemini AI Integration
 async function callGeminiAPI(messages) {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   
   if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY not configured');
+    console.error('GEMINI_API_KEY not found in environment variables');
+    throw new Error('AI service not configured. Please check environment variables.');
   }
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: messages.map(msg => ({
-          parts: [{ text: msg.content }],
-          role: msg.role === 'assistant' ? 'model' : 'user'
-        }))
-      })
-    });
+    console.log('Calling Gemini API with', messages.length, 'messages');
+    
+    // Use the Google AI SDK (recommended approach)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
+    // Convert messages to Gemini format
+    const history = messages.slice(0, -1).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
 
-    const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+    // Get the latest user message
+    const latestMessage = messages[messages.length - 1];
+    
+    // Start chat with history
+    const chat = model.startChat({ history });
+    
+    // Send the latest message
+    const result = await chat.sendMessage(latestMessage.content);
+    const response = await result.response;
+    const responseText = response.text();
+
+    console.log('Gemini API response received:', responseText.substring(0, 100) + '...');
+    return responseText;
+
   } catch (error) {
-    console.error('Gemini API Error:', error);
-    throw error;
+    console.error('Gemini API Error Details:', error);
+    
+    // Handle specific API errors
+    if (error.message?.includes('API_KEY')) {
+      throw new Error('Invalid API key. Please check your Gemini API key.');
+    } else if (error.message?.includes('quota')) {
+      throw new Error('API quota exceeded. Please check your Gemini API usage.');
+    } else if (error.message?.includes('SAFETY')) {
+      throw new Error('Content blocked by safety filters. Please rephrase your message.');
+    } else {
+      throw new Error(`AI service error: ${error.message || 'Unknown error occurred'}`);
+    }
   }
 }
-// async function callGeminiAPI(messages) {
-//     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  
-//     const history = messages.map(m => ({
-//       role: m.role === 'user' ? 'user' : 'model',
-//       parts: [{ text: m.content }],
-//     }));
-  
-//     const result = await model.generateContent({
-//       contents: history,
-//     });
-  
-//     return result.response.text();
-//   }
-  
 
 // GET - Fetch all chats for user
 export async function GET(request) {
@@ -109,19 +63,34 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || 'default_user';
     
-    const chats = await MockKVService.hget(KV_KEYS.CHATS, userId) || [];
+    console.log('Fetching chats for user:', userId);
     
-    // Sort by last message time (newest first)
-    chats.sort((a, b) => new Date(b.lastMessageTime || b.createdAt) - new Date(a.lastMessageTime || a.createdAt));
+    const chats = await DatabaseService.getChats(userId);
+    
+    // Convert database format to frontend format
+    const formattedChats = chats.map(chat => ({
+      id: chat.id,
+      title: chat.title,
+      lastMessage: chat.last_message,
+      timestamp: chat.last_message_time || chat.created_at,
+      createdAt: chat.created_at,
+      unreadCount: chat.unread_count
+    }));
+    
+    console.log('Found', formattedChats.length, 'chats for user:', userId);
     
     return NextResponse.json({
       success: true,
-      data: chats,
-      count: chats.length
+      data: formattedChats,
+      count: formattedChats.length
     });
   } catch (error) {
     console.error('Get chats error:', error);
-    return NextResponse.json({ error: 'Failed to fetch chats' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to fetch chats',
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -131,16 +100,25 @@ export async function POST(request) {
     const body = await request.json();
     const { action, userId = 'default_user', chatId, message } = body;
     
+    console.log('POST request:', { action, userId, chatId, messagePreview: message?.substring(0, 50) });
+    
     if (action === 'create_chat') {
       return await createNewChat(userId, body.title);
     } else if (action === 'send_message') {
       return await sendMessage(userId, chatId, message);
     } else {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        error: 'Invalid action. Expected "create_chat" or "send_message"' 
+      }, { status: 400 });
     }
   } catch (error) {
     console.error('POST error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Internal server error',
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -151,32 +129,38 @@ export async function PUT(request) {
     const { userId = 'default_user', chatId, title } = body;
     
     if (!chatId) {
-      return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        error: 'Chat ID is required' 
+      }, { status: 400 });
     }
     
-    const chats = await MockKVService.hget(KV_KEYS.CHATS, userId) || [];
-    const chatIndex = chats.findIndex(chat => chat.id === chatId);
+    const updatedChat = await DatabaseService.updateChat(chatId, { title });
     
-    if (chatIndex === -1) {
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+    if (!updatedChat) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Chat not found' 
+      }, { status: 404 });
     }
-    
-    // Update chat
-    chats[chatIndex] = {
-      ...chats[chatIndex],
-      title: title || chats[chatIndex].title
-    };
-    
-    await MockKVService.hset(KV_KEYS.CHATS, userId, chats);
     
     return NextResponse.json({
       success: true,
-      data: chats[chatIndex],
+      data: {
+        id: updatedChat.id,
+        title: updatedChat.title,
+        lastMessage: updatedChat.last_message,
+        timestamp: updatedChat.last_message_time || updatedChat.created_at
+      },
       message: 'Chat updated successfully'
     });
   } catch (error) {
     console.error('Update chat error:', error);
-    return NextResponse.json({ error: 'Failed to update chat' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to update chat',
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
@@ -188,18 +172,13 @@ export async function DELETE(request) {
     const chatId = searchParams.get('chatId');
     
     if (!chatId) {
-      return NextResponse.json({ error: 'Chat ID is required' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        error: 'Chat ID is required' 
+      }, { status: 400 });
     }
     
-    const chats = await MockKVService.hget(KV_KEYS.CHATS, userId) || [];
-    const updatedChats = chats.filter(chat => chat.id !== chatId);
-    
-    if (updatedChats.length === chats.length) {
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
-    }
-    
-    await MockKVService.hset(KV_KEYS.CHATS, userId, updatedChats);
-    await MockKVService.del(`${KV_KEYS.MESSAGES}:${chatId}`);
+    await DatabaseService.deleteChat(chatId);
     
     return NextResponse.json({
       success: true,
@@ -207,32 +186,35 @@ export async function DELETE(request) {
     });
   } catch (error) {
     console.error('Delete chat error:', error);
-    return NextResponse.json({ error: 'Failed to delete chat' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to delete chat',
+      message: error.message 
+    }, { status: 500 });
   }
 }
 
 // Helper Functions
 async function createNewChat(userId, title = 'New Chat') {
   try {
-    const existingChats = await MockKVService.hget(KV_KEYS.CHATS, userId) || [];
+    console.log('Creating new chat for user:', userId, 'with title:', title);
     
-    const newChat = {
-      ...DataModels.Chat,
-      id: MockKVService.generateId(),
-      userId,
-      title,
-      createdAt: new Date().toISOString()
-    };
+    const newChat = await DatabaseService.createChat(userId, title);
     
-    const updatedChats = [newChat, ...existingChats];
-    await MockKVService.hset(KV_KEYS.CHATS, userId, updatedChats);
+    console.log('New chat created:', newChat.id);
     
     return NextResponse.json({
       success: true,
-      data: newChat,
+      data: {
+        id: newChat.id,
+        title: newChat.title,
+        lastMessage: newChat.last_message,
+        timestamp: newChat.created_at
+      },
       message: 'Chat created successfully'
     }, { status: 201 });
   } catch (error) {
+    console.error('Create chat error:', error);
     throw error;
   }
 }
@@ -240,83 +222,64 @@ async function createNewChat(userId, title = 'New Chat') {
 async function sendMessage(userId, chatId, messageContent) {
   try {
     if (!chatId || !messageContent) {
-      return NextResponse.json({ error: 'Chat ID and message are required' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        error: 'Chat ID and message are required' 
+      }, { status: 400 });
     }
     
-    // Get existing messages
-    const messages = await MockKVService.hget(KV_KEYS.MESSAGES, chatId) || [];
+    console.log('Sending message to chat:', chatId, 'Message:', messageContent.substring(0, 50));
     
-    // Create user message
-    const userMessage = {
-      ...DataModels.Message,
-      id: MockKVService.generateId(),
-      chatId,
-      content: messageContent,
-      role: 'user',
-      timestamp: new Date().toISOString()
-    };
+    // Get recent messages for context (last 10 messages)
+    const recentMessages = await DatabaseService.getMessages(chatId, 10);
     
-    // Add user message to conversation
-    messages.push(userMessage);
+    // Add user message to database
+    const userMessage = await DatabaseService.addMessage(chatId, messageContent, 'user');
+    
+    // Prepare messages for AI (including the new user message)
+    const messagesForAI = [...recentMessages, userMessage];
+    
+    let aiMessage;
     
     // Get AI response from Gemini
     try {
-      const aiResponse = await callGeminiAPI(messages.slice(-10)); // Send last 10 messages for context
+      console.log('Getting AI response...');
+      const aiResponse = await callGeminiAPI(messagesForAI);
       
-      // Create AI message
-      const aiMessage = {
-        ...DataModels.Message,
-        id: MockKVService.generateId(),
-        chatId,
-        content: aiResponse,
-        role: 'assistant',
-        timestamp: new Date().toISOString()
-      };
+      // Add AI message to database
+      aiMessage = await DatabaseService.addMessage(chatId, aiResponse, 'assistant');
       
-      // Add AI message to conversation
-      messages.push(aiMessage);
-      
-      // Update chat's last message info
-      await updateChatLastMessage(userId, chatId, aiResponse);
+      console.log('AI response generated and saved successfully');
       
     } catch (aiError) {
       console.error('AI API Error:', aiError);
-      // Create error message
-      const errorMessage = {
-        ...DataModels.Message,
-        id: MockKVService.generateId(),
-        chatId,
-        content: 'Sorry, I encountered an error. Please try again.',
-        role: 'assistant',
-        timestamp: new Date().toISOString()
-      };
-      messages.push(errorMessage);
+      
+      // Add error message to database
+      const errorMessage = `Sorry, I encountered an error: ${aiError.message || 'Please try again.'}`;
+      aiMessage = await DatabaseService.addMessage(chatId, errorMessage, 'assistant');
     }
     
-    // Save updated messages
-    await MockKVService.hset(KV_KEYS.MESSAGES, chatId, messages);
+    console.log('Message conversation updated successfully');
+    
+    // Return formatted messages
+    const formattedMessages = [userMessage, aiMessage].map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      role: msg.role,
+      timestamp: msg.timestamp
+    }));
     
     return NextResponse.json({
       success: true,
-      data: messages.slice(-2), // Return last 2 messages (user + AI)
+      data: formattedMessages,
       message: 'Message sent successfully'
     });
   } catch (error) {
-    throw error;
-  }
-}
-
-async function updateChatLastMessage(userId, chatId, lastMessage) {
-  try {
-    const chats = await MockKVService.hget(KV_KEYS.CHATS, userId) || [];
-    const chatIndex = chats.findIndex(chat => chat.id === chatId);
-    
-    if (chatIndex !== -1) {
-      chats[chatIndex].lastMessage = lastMessage.substring(0, 100) + (lastMessage.length > 100 ? '...' : '');
-      chats[chatIndex].lastMessageTime = new Date().toISOString();
-      await MockKVService.hset(KV_KEYS.CHATS, userId, chats);
-    }
-  } catch (error) {
-    console.error('Update chat last message error:', error);
+    console.error('Send message error:', error);
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to send message',
+      message: error.message 
+    }, { status: 500 });
   }
 }
