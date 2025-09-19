@@ -1,11 +1,13 @@
 "use client"; 
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, Calendar, CheckSquare } from 'lucide-react';
+import { MessageCircle, Calendar, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
+import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
 
 const DigiMateHome = () => {
-  const [activeSection, setActiveSection] = useState('home');
+  const { activeSection, isMobileMenuOpen, handleSectionChange, toggleMobileMenu, closeMobileMenu } = useSidebar('home');
+  
   const [tasks, setTasks] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -232,79 +234,6 @@ const DigiMateHome = () => {
     fetchRecentChats(); // Tambahkan fungsi fetch chat history
   }, []);
 
-  const Sidebar = () => (
-    <div className="bg-white shadow-lg h-full flex flex-col">
-      <div className="p-6 border-b">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-            <div className="w-3 h-3 bg-white rounded-full"></div>
-            <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-            <p className="text-sm text-red-500">Your Internship Companion</p>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 p-4">
-        <div className="space-y-2">
-          {[
-            { id: 'home', icon: Home, label: 'Home', href: '/' },
-            { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-            { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
-            { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-            { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-          ].map((item) => (
-            item.href ? (
-              <Link key={item.id} href={item.href}>
-                <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}>
-                  <item.icon className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </div>
-              </Link>
-            ) : (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
-                  activeSection === item.id
-                    ? 'bg-red-50 text-red-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <item.icon className="w-6 h-6 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
-              </button>
-            )
-          ))}
-        </div>
-      </nav>
-    </div>
-  );
-
-  const MobileSidebar = ({ isOpen, onClose }) => (
-    <>
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <Sidebar />
-      </div>
-    </>
-  );
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
@@ -340,88 +269,71 @@ const DigiMateHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
-      <div className="hidden md:block w-64">
-        <Sidebar />
+      <div className="hidden md:block w-64 h-screen fixed">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       </div>
 
       {/* Mobile Sidebar */}
       <MobileSidebar 
         isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)} 
+        onClose={closeMobileMenu}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Content - Fixed mobile layout */}
+      <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
         {/* Mobile Header */}
-        <div className="md:hidden bg-white shadow-sm p-4 flex items-center justify-between">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <div className="w-6 h-6 flex flex-col justify-center space-y-1">
-              <div className="w-full h-0.5 bg-gray-600"></div>
-              <div className="w-full h-0.5 bg-gray-600"></div>
-              <div className="w-full h-0.5 bg-gray-600"></div>
-            </div>
-          </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-              <div className="w-1.5 h-1.5 bg-white rounded-full ml-0.5"></div>
-            </div>
-            <span className="font-bold text-gray-800">DigiMate</span>
-          </div>
-          <div className="w-10"></div>
-        </div>
+        <MobileHeader onMenuToggle={toggleMobileMenu} />
 
-        {/* Content Area */}
-        <div className="flex-1 p-4 md:p-8">
-          <div className="max-w-4xl">
+        {/* Content Area - Fixed mobile padding and overflow */}
+        <div className="flex-1 p-4 md:p-8 overflow-x-hidden">
+          <div className="max-w-full md:max-w-4xl">
             {/* Welcome Section */}
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+            <div className="mb-6 md:mb-8">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
                 Hello, {getDisplayName()}
               </h2>
-              <p className="text-gray-600 mb-4">Here's Your Summary as a Intern</p>
+              <p className="text-sm md:text-base text-gray-600 mb-4">Here's Your Summary as a Intern</p>
               
               {/* Error Alert */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
                   <p className="text-red-700 text-sm">{error}</p>
                 </div>
               )}
             </div>
 
             {/* Intern Tasks Section */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-red-500">Intern Tasks</h3>
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6 md:mb-8">
+              <div className="flex justify-between items-center mb-4 md:mb-6">
+                <h3 className="text-lg md:text-xl font-semibold text-red-500">Intern Tasks</h3>
                 <Link href="/tasks" className="text-sm text-red-500 hover:text-red-600">
                   View All
                 </Link>
               </div>
               
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
-                  <p className="text-gray-500">Loading tasks...</p>
+                <div className="text-center py-8 md:py-12">
+                  <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
+                  <p className="text-gray-500 text-sm md:text-base">Loading tasks...</p>
                 </div>
               ) : tasks.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-8 md:py-12">
                   <div className="text-gray-400 mb-2">
-                    <CheckSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <CheckSquare className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 opacity-30" />
                   </div>
-                  <p className="text-gray-500">No tasks available</p>
+                  <p className="text-gray-500 text-sm md:text-base">No tasks available</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {tasks.map((task) => (
-                    <div key={task.id} className={`border-l-4 ${getPriorityColor(task.priority)} bg-gray-50 p-4 rounded-r-lg`}>
-                      <div className="flex justify-between items-center">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-800">{task.title}</h4>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                    <div key={task.id} className={`border-l-4 ${getPriorityColor(task.priority)} bg-gray-50 p-3 md:p-4 rounded-r-lg`}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-800 text-sm md:text-base truncate pr-2">{task.title}</h4>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mt-2 space-y-2 sm:space-y-0">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)} inline-block w-fit`}>
                               {task.status.replace('_', ' ').toUpperCase()}
                             </span>
                             <span className="text-xs text-gray-500 capitalize">
@@ -429,7 +341,7 @@ const DigiMateHome = () => {
                             </span>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-gray-400 ml-2 flex-shrink-0">
                           {new Date(task.createdAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -440,6 +352,10 @@ const DigiMateHome = () => {
             </div>
 
             {/* Upcoming Events Section */}
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6 md:mb-8">
+              <div className="flex justify-between items-center mb-4 md:mb-6">
+                <h3 className="text-lg md:text-xl font-semibold text-red-500">Upcoming Events</h3>
+            {/* Upcoming Events Section */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold text-red-500">Upcoming Events</h3>
@@ -449,38 +365,38 @@ const DigiMateHome = () => {
               </div>
 
               {eventsLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
-                  <p className="text-gray-500">Loading events...</p>
+                <div className="text-center py-8 md:py-12">
+                  <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
+                  <p className="text-gray-500 text-sm md:text-base">Loading events...</p>
                 </div>
               ) : upcomingEvents.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center py-8 md:py-12">
                   <div className="text-gray-400 mb-2">
-                    <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <Calendar className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 opacity-30" />
                   </div>
-                  <p className="text-gray-500">No upcoming events</p>
-                  <p className="text-gray-400 text-sm mt-1">Events will appear here when scheduled</p>
+                  <p className="text-gray-500 text-sm md:text-base">No upcoming events</p>
+                  <p className="text-gray-400 text-xs md:text-sm mt-1">Events will appear here when scheduled</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {upcomingEvents.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div key={event.id} className="border rounded-lg p-3 md:p-4 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-medium text-gray-800">{event.title}</h4>
-                            <span className={`text-xs px-2 py-1 rounded capitalize ${getTypeColor(event.type)}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-2">
+                            <h4 className="font-medium text-gray-800 text-sm md:text-base truncate">{event.title}</h4>
+                            <span className={`text-xs px-2 py-1 rounded capitalize ${getTypeColor(event.type)} inline-block w-fit mt-1 sm:mt-0`}>
                               {event.type}
                             </span>
                           </div>
                           
                           {event.description && (
-                            <p className="text-sm text-gray-600 mb-2">{event.description}</p>
+                            <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2">{event.description}</p>
                           )}
                           
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-xs md:text-sm text-gray-500 space-y-1 sm:space-y-0">
                             <div className="flex items-center space-x-1">
-                              <Calendar className="w-4 h-4" />
+                              <Calendar className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                               <span>{formatDisplayDate(event.date)}</span>
                             </div>
                             
@@ -502,6 +418,15 @@ const DigiMateHome = () => {
               )}
             </div>
 
+            {/* Recent Chats Section */}
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-semibold text-red-500 mb-4 md:mb-6">Recent Chats</h3>
+              <div className="text-center py-8 md:py-12">
+                <div className="text-gray-400 mb-2">
+                  <MessageCircle className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 opacity-30" />
+                </div>
+                <p className="text-gray-500 text-sm md:text-base">No chat history available</p>
+              </div>
             {/* Recent Chats Section - SECTION YANG DIPERBARUI */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
