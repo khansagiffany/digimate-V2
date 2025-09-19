@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, CheckSquare, Calendar, Plus, Edit3, Trash2, Clock, X, Menu } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Edit3, Trash2, Clock, X, Calendar } from 'lucide-react';
+import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
 
 const SchedulePage = () => {
-  const [activeTab, setActiveTab] = useState('schedule');
-  const [activeSection, setActiveSection] = useState('schedule');
+  const { activeSection, isMobileMenuOpen, handleSectionChange, toggleMobileMenu, closeMobileMenu } = useSidebar('schedule');
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
@@ -15,7 +15,6 @@ const SchedulePage = () => {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -44,17 +43,6 @@ const SchedulePage = () => {
   useEffect(() => {
     filterSchedulesForMonth();
   }, [schedules, currentDate]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const formatDateString = (date) => {
     const year = date.getFullYear();
@@ -245,110 +233,36 @@ const SchedulePage = () => {
     });
   };
 
-  const handleNavClick = () => {
-    setIsSidebarOpen(false);
-  };
-
   return (
-    <div className="flex h-screen bg-gray-50">
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <div className={`${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
-        
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-                <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-                <p className="text-sm text-red-500">Your Internship Companion</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="md:hidden p-1 rounded-lg hover:bg-gray-100"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4">
-          <div className="space-y-2">
-            {[
-              { id: 'home', icon: Home, label: 'Home', href: '/' },
-              { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-              { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
-              { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-              { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-            ].map((item) => (
-              item.href ? (
-                <Link key={item.id} href={item.href} onClick={handleNavClick}>
-                  <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
-                    activeSection === item.id
-                      ? 'bg-red-50 text-red-600'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}>
-                    <item.icon className="w-6 h-6 mb-1" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </div>
-                </Link>
-              ) : (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveSection(item.id);
-                    handleNavClick();
-                  }}
-                  className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
-                    activeSection === item.id
-                      ? 'bg-red-50 text-red-600'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <item.icon className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </button>
-              )
-            ))}
-          </div>
-        </nav>
-
-        <div className="p-4 border-t">
-          <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold">N</span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block w-64 h-screen fixed">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="bg-white shadow-sm border-b p-6">
+      {/* Mobile Sidebar */}
+      <MobileSidebar 
+        isOpen={isMobileMenuOpen} 
+        onClose={closeMobileMenu}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col md:ml-64 min-h-screen">
+        {/* Mobile Header */}
+        <MobileHeader onMenuToggle={toggleMobileMenu} />
+
+        {/* Page Header */}
+        <div className="bg-white shadow-sm border-b p-4 md:p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Menu size={20} />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">Schedule</h1>
-                <p className="text-gray-600 mt-1">Manage your events and appointments</p>
-              </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-800">Schedule</h1>
+              <p className="text-gray-600 mt-1 text-sm md:text-base">Manage your events and appointments</p>
             </div>
             <button
               onClick={() => openModal()}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm md:text-base"
             >
               <Plus size={16} />
               <span className="hidden sm:inline">Add Event</span>
@@ -357,8 +271,10 @@ const SchedulePage = () => {
           </div>
         </div>
 
+        {/* Content Area */}
         <div className="flex-1 p-4 md:p-6 overflow-hidden">
           <div className="flex flex-col lg:flex-row h-full space-y-6 lg:space-y-0 lg:space-x-6">
+            {/* Calendar Section */}
             <div className="lg:w-2/3 bg-white rounded-lg shadow-sm border p-4 md:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg md:text-xl font-semibold text-black">
@@ -386,6 +302,7 @@ const SchedulePage = () => {
                 </div>
               </div>
 
+              {/* Calendar Grid */}
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                   <div key={day} className="p-1 md:p-2 text-center text-xs md:text-sm font-medium text-gray-500">
@@ -415,16 +332,24 @@ const SchedulePage = () => {
               </div>
             </div>
 
+            {/* Events List */}
             <div className="lg:w-1/3 bg-white rounded-lg shadow-sm border p-4 md:p-6">
               <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
                 Upcoming Events (Next Month)
               </h3>
 
               {loading ? (
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-red-500 mx-auto mb-2"></div>
+                  <p className="text-gray-500 text-sm md:text-base">Loading...</p>
+                </div>
               ) : filteredSchedules.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  No upcoming events
+                <div className="text-center py-8">
+                  <div className="text-gray-400 mb-2">
+                    <Calendar className="w-8 h-8 md:w-12 md:h-12 mx-auto mb-2 opacity-30" />
+                  </div>
+                  <p className="text-gray-500 text-sm md:text-base">No upcoming events</p>
+                  <p className="text-gray-400 text-xs md:text-sm mt-1">Events will appear here when scheduled</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-64 lg:max-h-96 overflow-y-auto">
@@ -488,6 +413,7 @@ const SchedulePage = () => {
         </div>
       </div>
 
+      {/* Modal */}
       {showModal && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
