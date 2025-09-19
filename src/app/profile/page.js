@@ -1,14 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Home, User, MessageCircle, CheckSquare, Calendar, Save, Edit3, Menu, X } from 'lucide-react';
-import Link from 'next/link';
+import { Save, Edit3 } from 'lucide-react';
+import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
 
 const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
-  const [activeSection, setActiveSection] = useState('profile');
+  const {
+    activeSection,
+    isMobileMenuOpen,
+    handleSectionChange,
+    toggleMobileMenu,
+    closeMobileMenu
+  } = useSidebar('profile');
+
   const [isEditing, setIsEditing] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -23,27 +28,8 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const sidebarItems = [
-    { id: 'home', icon: Home, label: 'Home', href: '/' },
-    { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-    { id: 'chat', icon: MessageCircle, label: 'Chat', href: '/chat' },
-    { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-    { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-  ];
-
   useEffect(() => {
     fetchProfile();
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const fetchProfile = async () => {
@@ -167,100 +153,40 @@ const ProfilePage = () => {
     }));
   };
 
-  const handleNavClick = () => {
-    setIsSidebarOpen(false);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600">Loading profile...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <div className={`${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0 fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
-        
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-                <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-                <p className="text-sm text-red-500">Your Internship Companion</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="md:hidden p-1 rounded-lg hover:bg-gray-100"
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4">
-          <div className="space-y-2">
-            {sidebarItems.map((item) => (
-              item.href ? (
-                <Link key={item.id} href={item.href} onClick={handleNavClick}>
-                  <div className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer ${
-                    activeSection === item.id
-                      ? 'bg-red-50 text-red-600'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}>
-                    <item.icon className="w-6 h-6 mb-1" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                  </div>
-                </Link>
-              ) : (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveSection(item.id);
-                    handleNavClick();
-                  }}
-                  className={`w-full flex flex-col items-center p-3 rounded-lg transition-colors ${
-                    activeSection === item.id
-                      ? 'bg-red-50 text-red-600'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <item.icon className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </button>
-              )
-            ))}
-          </div>
-        </nav>
-
-        <div className="p-4 border-t">
-          <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
-            <span className="text-white font-semibold">N</span>
-          </div>
-        </div>
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block w-64">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       </div>
 
-      <div className="flex-1 flex flex-col md:ml-0">
-        <div className="bg-white shadow-sm border-b p-6">
+      {/* Mobile Sidebar */}
+      <MobileSidebar 
+        isOpen={isMobileMenuOpen}
+        onClose={closeMobileMenu}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Mobile Header */}
+        <MobileHeader onMenuToggle={toggleMobileMenu} />
+
+        {/* Desktop Header */}
+        <div className="hidden md:block bg-white shadow-sm border-b p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Menu size={20} />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
-                <p className="text-gray-600 mt-1">Manage your personal information</p>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Profile</h1>
+              <p className="text-gray-600 mt-1">Manage your personal information</p>
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
@@ -272,12 +198,30 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <div className="flex-1 p-6 overflow-y-auto">
+        {/* Mobile Header Content */}
+        <div className="md:hidden bg-white shadow-sm border-b p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">Profile</h1>
+              <p className="text-gray-600 text-sm">Manage your personal information</p>
+            </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center space-x-2 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+            >
+              <Edit3 size={14} />
+              <span className="hidden sm:inline">{isEditing ? 'Cancel' : 'Edit'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Profile Content */}
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
               <div className="text-center mb-8">
                 <div className="relative inline-block">
-                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 mx-auto mb-4">
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden bg-gray-200 mx-auto mb-4">
                     {profile.profileImage ? (
                       <img 
                         src={profile.profileImage} 
@@ -286,15 +230,15 @@ const ProfilePage = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <User size={48} />
+                        <User size={window.innerWidth >= 768 ? 48 : 36} />
                       </div>
                     )}
                   </div>
                   
                   {isEditing && (
                     <div className="absolute bottom-0 right-0">
-                      <label className="cursor-pointer bg-red-500 text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
-                        <Edit3 size={16} />
+                      <label className="cursor-pointer bg-red-500 text-white w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
+                        <Edit3 size={window.innerWidth >= 768 ? 16 : 14} />
                         <input
                           type="file"
                           accept="image/*"
@@ -312,11 +256,11 @@ const ProfilePage = () => {
                 )}
                 
                 {isEditing && !uploading && (
-                  <p className="text-sm text-gray-500">Click the edit icon to change your profile picture</p>
+                  <p className="text-xs md:text-sm text-gray-500">Click the edit icon to change your profile picture</p>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div className="md:col-span-2">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
                 </div>
@@ -467,7 +411,7 @@ const ProfilePage = () => {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="flex items-center space-x-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center space-x-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto justify-center md:justify-start"
                     >
                       <Save size={16} />
                       <span>{saving ? 'Saving...' : 'Save Changes'}</span>

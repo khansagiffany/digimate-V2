@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, Menu, X, Home, Calendar, CheckSquare, History } from 'lucide-react';
-import Link from 'next/link';
+import { Send, Plus, MessageSquare, Bot, User, Trash2, Edit3, History } from 'lucide-react';
+import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
 
 const formatMarkdown = (text) => {
   let formatted = text
@@ -186,49 +186,6 @@ const WelcomeScreen = ({ setInputMessage }) => {
   );
 };
 
-const MainSidebar = ({ activeSection, setActiveSection }) => (
-  <div className="bg-white shadow-lg h-full flex flex-col">
-    <div className="p-6 border-b">
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-          <div className="w-3 h-3 bg-white rounded-full"></div>
-          <div className="w-2 h-2 bg-white rounded-full ml-1"></div>
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">DigiMate</h1>
-          <p className="text-sm text-red-500">Your Internship Companion</p>
-        </div>
-      </div>
-    </div>
-
-    <nav className="flex-1 p-4">
-      <div className="space-y-2">
-        {[
-          { id: 'home', icon: Home, label: 'Home', href: '/' },
-          { id: 'profile', icon: User, label: 'Profile', href: '/profile' },
-          { id: 'chat', icon: MessageSquare, label: 'Chat', href: '/chat', active: true },
-          { id: 'task', icon: CheckSquare, label: 'Task', href: '/tasks' },
-          { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' }
-        ].map((item) => (
-          item.href && !item.active ? (
-            <Link key={item.id} href={item.href}>
-              <div className="w-full flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer text-gray-600 hover:bg-gray-50">
-                <item.icon className="w-6 h-6 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
-              </div>
-            </Link>
-          ) : (
-            <div key={item.id} className="w-full flex flex-col items-center p-3 rounded-lg bg-red-50 text-red-600">
-              <item.icon className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">{item.label}</span>
-            </div>
-          )
-        ))}
-      </div>
-    </nav>
-  </div>
-);
-
 const HistorySidebar = ({ 
   chats, 
   currentChatId, 
@@ -281,29 +238,20 @@ const HistorySidebar = ({
   </div>
 );
 
-const MobileSidebar = ({ isOpen, onClose, children }) => (
-  <>
-    {isOpen && (
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-        onClick={onClose}
-      />
-    )}
-    <div className={`fixed left-0 top-0 h-full w-64 bg-white z-50 transform transition-transform duration-300 md:hidden ${
-      isOpen ? 'translate-x-0' : '-translate-x-full'
-    }`}>
-      {children}
-    </div>
-  </>
-);
-
 const ChatbotApp = () => {
+  const {
+    activeSection,
+    isMobileMenuOpen,
+    handleSectionChange,
+    toggleMobileMenu,
+    closeMobileMenu
+  } = useSidebar('chat');
+
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -612,19 +560,17 @@ const ChatbotApp = () => {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Main Sidebar (Desktop) */}
-      <div className="hidden lg:flex lg:flex-shrink-0">
-        <div className="w-64">
-          <MainSidebar />
-        </div>
+      <div className="hidden lg:block w-64">
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       </div>
 
       {/* Mobile Main Sidebar */}
       <MobileSidebar 
         isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)}
-      >
-        <MainSidebar />
-      </MobileSidebar>
+        onClose={closeMobileMenu}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+      />
 
       {/* History Sidebar (Desktop) */}
       <div className="hidden md:flex md:flex-shrink-0">
@@ -645,27 +591,7 @@ const ChatbotApp = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Header */}
-        <div className="md:hidden bg-white shadow-sm p-4 flex items-center justify-between flex-shrink-0">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-              <div className="w-1.5 h-1.5 bg-white rounded-full ml-0.5"></div>
-            </div>
-            <span className="font-bold text-gray-800">DigiMate Chat</span>
-          </div>
-          <button
-            onClick={createNewChat}
-            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
+        <MobileHeader onMenuToggle={toggleMobileMenu} />
 
         {/* Desktop Header */}
         <div className="hidden md:block bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
