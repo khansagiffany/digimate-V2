@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Edit3 } from 'lucide-react';
+import { Save, Edit3, User } from 'lucide-react';
 import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
 
 const ProfilePage = () => {
@@ -24,7 +24,6 @@ const ProfilePage = () => {
     position: '',
     profileImage: ''
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -44,8 +43,6 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -152,14 +149,6 @@ const ProfilePage = () => {
       [field]: value
     }));
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading profile...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen bg-gray-50">

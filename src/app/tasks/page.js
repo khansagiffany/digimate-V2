@@ -11,6 +11,7 @@ const TasksPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [newTask, setNewTask] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState('medium');
   const [isCreating, setIsCreating] = useState(false);
 
   const userId = 'default_user'; // In production, get from auth
@@ -48,7 +49,7 @@ const TasksPage = () => {
         },
         body: JSON.stringify({
           title: newTask.trim(),
-          priority: 'medium'
+          priority: newTaskPriority
         }),
       });
       
@@ -57,6 +58,7 @@ const TasksPage = () => {
       if (data.success) {
         setTasks([data.data, ...tasks]);
         setNewTask('');
+        setNewTaskPriority('medium');
         setError('');
       } else {
         setError('Failed to create task');
@@ -132,6 +134,15 @@ const TasksPage = () => {
       case 'medium': return 'border-l-yellow-500';
       case 'low': return 'border-l-green-500';
       default: return 'border-l-gray-300';
+    }
+  };
+
+  const getPrioritySelectColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'border-red-300 bg-red-50';
+      case 'medium': return 'border-yellow-300 bg-yellow-50';
+      case 'low': return 'border-green-300 bg-green-50';
+      default: return 'border-gray-300 bg-white';
     }
   };
 
@@ -263,19 +274,28 @@ const TasksPage = () => {
 
             {/* Add Task Input */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex gap-4">
+              <div className="flex flex-col md:flex-row gap-4">
                 <input
                   type="text"
                   placeholder="Enter new task..."
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="flex-1 px-4 py-3 border text-gray-600 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
+                <select
+                  value={newTaskPriority}
+                  onChange={(e) => setNewTaskPriority(e.target.value)}
+                  className={`px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-600 min-w-32 ${getPrioritySelectColor(newTaskPriority)}`}
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
+                </select>
                 <button
                   onClick={createTask}
                   disabled={isCreating || !newTask.trim()}
-                  className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                  className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors min-w-32"
                 >
                   {isCreating ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
