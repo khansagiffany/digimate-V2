@@ -168,7 +168,7 @@ const WelcomeScreen = ({ setInputMessage }) => {
           <Bot size={32} className="text-white" />
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to DigiMate Chat!</h2>
-        <p className="text-gray-500 mb-6">Ask me anything and I'll help you with information, creative tasks, problem-solving, and more.</p>
+        <p className="text-gray-500 mb-6">Ask me anything and I will help you with information, creative tasks, problem-solving, and more.</p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
           {suggestions.map((suggestion, index) => (
