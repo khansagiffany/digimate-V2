@@ -14,6 +14,7 @@ const ProfilePage = () => {
   } = useSidebar('profile');
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -28,6 +29,7 @@ const ProfilePage = () => {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     fetchProfile();
   }, []);
 
@@ -150,6 +152,12 @@ const ProfilePage = () => {
     }));
   };
 
+  // Helper function to get responsive icon size
+  const getIconSize = (mobileSize, desktopSize) => {
+    if (!isMounted) return desktopSize; // Default to desktop size during SSR
+    return window.innerWidth >= 768 ? desktopSize : mobileSize;
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
@@ -219,7 +227,7 @@ const ProfilePage = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <User size={window.innerWidth >= 768 ? 48 : 36} />
+                        <User size={getIconSize(36, 48)} />
                       </div>
                     )}
                   </div>
@@ -227,7 +235,7 @@ const ProfilePage = () => {
                   {isEditing && (
                     <div className="absolute bottom-0 right-0">
                       <label className="cursor-pointer bg-red-500 text-white w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors">
-                        <Edit3 size={window.innerWidth >= 768 ? 16 : 14} />
+                        <Edit3 size={getIconSize(14, 16)} />
                         <input
                           type="file"
                           accept="image/*"
