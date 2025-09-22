@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Calendar, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Sidebar, MobileSidebar, MobileHeader, useSidebar } from '@/components/Sidebar';
+import { useCallback } from "react";
 
 const DigiMateHome = () => {
   const { activeSection, isMobileMenuOpen, handleSectionChange, toggleMobileMenu, closeMobileMenu } = useSidebar('home');
@@ -69,40 +70,40 @@ const DigiMateHome = () => {
   };
 
   // Fetch upcoming events
-  const fetchEvents = async () => {
-    setEventsLoading(true);
-    try {
-      const response = await fetch(`/api/schedule?userId=${userId}`);
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const todayStr = formatDateString(today);
-        
-        const upcoming = data.data
-          .filter(event => {
-            return event.date >= todayStr;
-          })
-          .sort((a, b) => {
-            if (a.date === b.date) {
-              return a.startTime.localeCompare(b.startTime);
-            }
-            return a.date.localeCompare(b.date);
-          })
-          .slice(0, 5);
-        
-        setUpcomingEvents(upcoming);
-      } else {
-        console.error('Failed to load events:', data);
-      }
-    } catch (err) {
-      console.error('Failed to load events:', err);
-    } finally {
-      setEventsLoading(false);
+  const fetchEvents = useCallback(async () => {
+  setEventsLoading(true);
+  try {
+    const response = await fetch(`/api/schedule?userId=${userId}`);
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const todayStr = formatDateString(today);
+
+      const upcoming = data.data
+        .filter((event) => {
+          return event.date >= todayStr;
+        })
+        .sort((a, b) => {
+          if (a.date === b.date) {
+            return a.startTime.localeCompare(b.startTime);
+          }
+          return a.date.localeCompare(b.date);
+        })
+        .slice(0, 5);
+
+      setUpcomingEvents(upcoming);
+    } else {
+      console.error("Failed to load events:", data);
     }
-  };
+  } catch (err) {
+    console.error("Failed to load events:", err);
+  } finally {
+    setEventsLoading(false);
+  }
+}, [userId]);
 
   // Fetch recent chats
   const fetchRecentChats = async () => {
@@ -193,11 +194,11 @@ const DigiMateHome = () => {
   };
 
   useEffect(() => {
-    fetchProfile();
-    fetchTasks();
-    fetchEvents();
-    fetchRecentChats();
-  }, []);
+  fetchProfile();
+  fetchTasks();
+  fetchEvents();
+  fetchRecentChats();
+}, [fetchEvents]);
 
   const getStatusColor = (status) => {
     switch (status) {
