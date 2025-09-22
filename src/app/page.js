@@ -260,7 +260,7 @@ const DigiMateHome = () => {
               <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
                 Hello, {getDisplayName()}
               </h2>
-              <p className="text-sm md:text-base text-gray-600 mb-4">Here's Your Summary as a Intern</p>
+              <p className="text-sm md:text-base text-gray-600 mb-4">Here is Your Summary as a Intern</p>
               
               {/* Error Alert */}
               {error && (
