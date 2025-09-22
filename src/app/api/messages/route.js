@@ -1,6 +1,6 @@
 // src/app/api/messages/route.js
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseService } from '../../../lib/database.js';
+import { KVService, DataModels } from '../../../lib/kv.js';
 
 // GET - Fetch messages for a specific chat
 export async function GET(request) {
@@ -19,19 +19,23 @@ export async function GET(request) {
       }, { status: 400 });
     }
     
-    // Get messages from database
-    const messages = await DatabaseService.getMessages(chatId, limit, offset);
-    const totalCount = await DatabaseService.getMessageCount(chatId);
+    // Get messages from KV
+    const messagesKey = `messages:${chatId}`;
+    const allMessages = await KVService.get(messagesKey) || [];
+    
+    // Apply pagination
+    const totalCount = allMessages.length;
+    const paginatedMessages = allMessages.slice(offset, offset + limit);
     
     // Format messages for frontend
-    const formattedMessages = messages.map(msg => ({
+    const formattedMessages = paginatedMessages.map(msg => ({
       id: msg.id,
       content: msg.content,
       role: msg.role,
       timestamp: msg.timestamp
     }));
     
-    console.log('Found', messages.length, 'messages for chat:', chatId);
+    console.log('Found', paginatedMessages.length, 'messages for chat:', chatId);
     
     return NextResponse.json({
       success: true,
@@ -70,15 +74,33 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    const message = await DatabaseService.addMessage(chatId, content, role);
+    // Get existing messages
+    const messagesKey = `messages:${chatId}`;
+    const existingMessages = await KVService.get(messagesKey) || [];
+    
+    // Create new message
+    const newMessage = {
+      ...DataModels.Message,
+      id: KVService.generateId(),
+      chatId,
+      content,
+      role,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Add message to array
+    const updatedMessages = [...existingMessages, newMessage];
+    
+    // Save back to KV
+    await KVService.set(messagesKey, updatedMessages);
     
     return NextResponse.json({
       success: true,
       data: {
-        id: message.id,
-        content: message.content,
-        role: message.role,
-        timestamp: message.timestamp
+        id: newMessage.id,
+        content: newMessage.content,
+        role: newMessage.role,
+        timestamp: newMessage.timestamp
       },
       message: 'Message added successfully'
     });
@@ -105,7 +127,9 @@ export async function DELETE(request) {
       }, { status: 400 });
     }
     
-    await DatabaseService.clearMessages(chatId);
+    // Delete messages from KV
+    const messagesKey = `messages:${chatId}`;
+    await KVService.del(messagesKey);
     
     return NextResponse.json({
       success: true,
@@ -134,15 +158,44 @@ export async function PUT(request) {
       }, { status: 400 });
     }
     
-    const searchResults = await DatabaseService.searchMessages(userId, query, limit);
+    // Get user's chats to find all chat IDs
+    const userChats = await KVService.hget('chats', userId) || [];
+    const searchResults = [];
     
-    const formattedResults = searchResults.map(result => ({
+    // Search through all chat messages
+    for (const chat of userChats) {
+      try {
+        const messagesKey = `messages:${chat.id}`;
+        const chatMessages = await KVService.get(messagesKey) || [];
+        
+        // Filter messages that contain the search query
+        const matchingMessages = chatMessages
+          .filter(msg => msg.content.toLowerCase().includes(query.toLowerCase()))
+          .map(msg => ({
+            ...msg,
+            chatId: chat.id,
+            chatTitle: chat.title
+          }));
+        
+        searchResults.push(...matchingMessages);
+      } catch (error) {
+        console.warn(`Failed to search in chat ${chat.id}:`, error);
+        continue;
+      }
+    }
+    
+    // Sort by timestamp (newest first) and limit results
+    const sortedResults = searchResults
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, limit);
+    
+    const formattedResults = sortedResults.map(result => ({
       id: result.id,
       content: result.content,
       role: result.role,
       timestamp: result.timestamp,
-      chatId: result.chat_id,
-      chatTitle: result.chat_title
+      chatId: result.chatId,
+      chatTitle: result.chatTitle
     }));
     
     return NextResponse.json({

@@ -1,7 +1,7 @@
 // src/app/api/chat/route.js
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { DatabaseService } from '../../../lib/database.js';
+import { KVService, KV_KEYS, DataModels } from '../../../lib/kv.js';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -65,16 +65,17 @@ export async function GET(request) {
     
     console.log('Fetching chats for user:', userId);
     
-    const chats = await DatabaseService.getChats(userId);
+    // Get chats from KV
+    const chats = await KVService.hget(KV_KEYS.CHATS, userId) || [];
     
-    // Convert database format to frontend format
+    // Convert to frontend format
     const formattedChats = chats.map(chat => ({
       id: chat.id,
-      title: chat.title,
-      lastMessage: chat.last_message,
-      timestamp: chat.last_message_time || chat.created_at,
-      createdAt: chat.created_at,
-      unreadCount: chat.unread_count
+      title: chat.title || 'New Chat',
+      lastMessage: chat.lastMessage,
+      timestamp: chat.lastMessageTime || chat.createdAt,
+      createdAt: chat.createdAt,
+      unreadCount: chat.unreadCount || 0
     }));
     
     console.log('Found', formattedChats.length, 'chats for user:', userId);
@@ -135,22 +136,38 @@ export async function PUT(request) {
       }, { status: 400 });
     }
     
-    const updatedChat = await DatabaseService.updateChat(chatId, { title });
+    // Get existing chats
+    const existingChats = await KVService.hget(KV_KEYS.CHATS, userId) || [];
     
-    if (!updatedChat) {
+    // Find and update chat
+    const chatIndex = existingChats.findIndex(chat => chat.id === chatId);
+    
+    if (chatIndex === -1) {
       return NextResponse.json({ 
         success: false,
         error: 'Chat not found' 
       }, { status: 404 });
     }
     
+    // Update chat
+    existingChats[chatIndex] = {
+      ...existingChats[chatIndex],
+      title: title || existingChats[chatIndex].title,
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Save back to KV
+    await KVService.hset(KV_KEYS.CHATS, userId, existingChats);
+    
+    const updatedChat = existingChats[chatIndex];
+    
     return NextResponse.json({
       success: true,
       data: {
         id: updatedChat.id,
         title: updatedChat.title,
-        lastMessage: updatedChat.last_message,
-        timestamp: updatedChat.last_message_time || updatedChat.created_at
+        lastMessage: updatedChat.lastMessage,
+        timestamp: updatedChat.lastMessageTime || updatedChat.createdAt
       },
       message: 'Chat updated successfully'
     });
@@ -178,7 +195,24 @@ export async function DELETE(request) {
       }, { status: 400 });
     }
     
-    await DatabaseService.deleteChat(chatId);
+    // Get existing chats
+    const existingChats = await KVService.hget(KV_KEYS.CHATS, userId) || [];
+    
+    // Remove chat
+    const updatedChats = existingChats.filter(chat => chat.id !== chatId);
+    
+    if (updatedChats.length === existingChats.length) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Chat not found' 
+      }, { status: 404 });
+    }
+    
+    // Save back to KV
+    await KVService.hset(KV_KEYS.CHATS, userId, updatedChats);
+    
+    // Also delete messages for this chat
+    await KVService.del(`messages:${chatId}`);
     
     return NextResponse.json({
       success: true,
@@ -199,7 +233,23 @@ async function createNewChat(userId, title = 'New Chat') {
   try {
     console.log('Creating new chat for user:', userId, 'with title:', title);
     
-    const newChat = await DatabaseService.createChat(userId, title);
+    // Get existing chats
+    const existingChats = await KVService.hget(KV_KEYS.CHATS, userId) || [];
+    
+    // Create new chat
+    const newChat = {
+      ...DataModels.Chat,
+      id: KVService.generateId(),
+      userId,
+      title,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Add to chats array
+    const updatedChats = [newChat, ...existingChats];
+    
+    // Save to KV
+    await KVService.hset(KV_KEYS.CHATS, userId, updatedChats);
     
     console.log('New chat created:', newChat.id);
     
@@ -208,8 +258,8 @@ async function createNewChat(userId, title = 'New Chat') {
       data: {
         id: newChat.id,
         title: newChat.title,
-        lastMessage: newChat.last_message,
-        timestamp: newChat.created_at
+        lastMessage: newChat.lastMessage,
+        timestamp: newChat.createdAt
       },
       message: 'Chat created successfully'
     }, { status: 201 });
@@ -230,33 +280,78 @@ async function sendMessage(userId, chatId, messageContent) {
     
     console.log('Sending message to chat:', chatId, 'Message:', messageContent.substring(0, 50));
     
-    // Get recent messages for context (last 10 messages)
-    const recentMessages = await DatabaseService.getMessages(chatId, 10);
+    // Get existing messages for this chat
+    const messagesKey = `messages:${chatId}`;
+    const existingMessages = await KVService.get(messagesKey) || [];
     
-    // Add user message to database
-    const userMessage = await DatabaseService.addMessage(chatId, messageContent, 'user');
+    // Create user message
+    const userMessage = {
+      ...DataModels.Message,
+      id: KVService.generateId(),
+      chatId,
+      content: messageContent,
+      role: 'user',
+      timestamp: new Date().toISOString()
+    };
     
-    // Prepare messages for AI (including the new user message)
-    const messagesForAI = [...recentMessages, userMessage];
+    // Add user message to messages
+    const updatedMessages = [...existingMessages, userMessage];
+    
+    // Get recent messages for AI context (last 10)
+    const recentMessages = updatedMessages.slice(-10);
     
     let aiMessage;
     
     // Get AI response from Gemini
     try {
       console.log('Getting AI response...');
-      const aiResponse = await callGeminiAPI(messagesForAI);
+      const aiResponse = await callGeminiAPI(recentMessages);
       
-      // Add AI message to database
-      aiMessage = await DatabaseService.addMessage(chatId, aiResponse, 'assistant');
+      // Create AI message
+      aiMessage = {
+        ...DataModels.Message,
+        id: KVService.generateId(),
+        chatId,
+        content: aiResponse,
+        role: 'assistant',
+        timestamp: new Date().toISOString()
+      };
       
-      console.log('AI response generated and saved successfully');
+      console.log('AI response generated successfully');
       
     } catch (aiError) {
       console.error('AI API Error:', aiError);
       
-      // Add error message to database
+      // Create error message
       const errorMessage = `Sorry, I encountered an error: ${aiError.message || 'Please try again.'}`;
-      aiMessage = await DatabaseService.addMessage(chatId, errorMessage, 'assistant');
+      aiMessage = {
+        ...DataModels.Message,
+        id: KVService.generateId(),
+        chatId,
+        content: errorMessage,
+        role: 'assistant',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    // Add AI message to messages
+    const finalMessages = [...updatedMessages, aiMessage];
+    
+    // Save messages to KV
+    await KVService.set(messagesKey, finalMessages);
+    
+    // Update chat with last message info
+    const existingChats = await KVService.hget(KV_KEYS.CHATS, userId) || [];
+    const chatIndex = existingChats.findIndex(chat => chat.id === chatId);
+    
+    if (chatIndex !== -1) {
+      existingChats[chatIndex] = {
+        ...existingChats[chatIndex],
+        lastMessage: aiMessage.content.substring(0, 100) + (aiMessage.content.length > 100 ? '...' : ''),
+        lastMessageTime: aiMessage.timestamp
+      };
+      
+      await KVService.hset(KV_KEYS.CHATS, userId, existingChats);
     }
     
     console.log('Message conversation updated successfully');

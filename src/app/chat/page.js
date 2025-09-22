@@ -155,10 +155,10 @@ const ChatItem = ({ chat, isActive, onSelect, onEdit, onDelete, editingChatId, e
 
 const WelcomeScreen = ({ setInputMessage }) => {
   const suggestions = [
-    'What can you help me with?',
-    'Write a creative story about space exploration',
-    'Explain quantum computing in simple terms',
-    'Help me plan a healthy meal'
+    'Apa saja persiapan untuk interview?',
+    'Skill yang harus dimiliki saat internship',
+    'Cara menjaga hubungan baik dengan rekan kerja',
+    'Bantu aku menyusun rencana untuk internship'
   ];
 
   return (
