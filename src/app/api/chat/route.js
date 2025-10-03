@@ -19,7 +19,7 @@ async function callGeminiAPI(messages) {
     console.log('Calling Gemini API with', messages.length, 'messages');
     
     // Use the Google AI SDK (recommended approach)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // Convert messages to Gemini format
     const history = messages.slice(0, -1).map(msg => ({
