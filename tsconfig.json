@@ -1,43 +1,45 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
+
     "allowJs": true,
     "skipLibCheck": true,
+
     "strict": false,
+    "strictNullChecks": true,
+
     "noEmit": true,
     "incremental": true,
+
     "module": "esnext",
+    "moduleResolution": "bundler",
+
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
+
     "jsx": "preserve",
+
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".", // 🔥 ini penting
+
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ] // 🔥 ini yang bikin '@/types' bisa ketemu
-    },
-    "strictNullChecks": true
+      "@/*": ["src/*"]
+    }
   },
+
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx"
-, "src/lib/kv.js"  ],
-  "exclude": [
-    "node_modules"
-  ]
+    "**/*.tsx",
+    "src/lib/kv.js"
+  ],
+
+  "exclude": ["node_modules"]
 }
